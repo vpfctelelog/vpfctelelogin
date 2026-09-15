@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPFC Admin - Employee Performance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --sidebar-bg: #1e293b; --sidebar-hover: #334155;
+            --main-bg: #F4F7FE; --card-bg: #FFFFFF;
+            --text-main: #2B3674; --text-muted: #A3AED0;
+            --border-color: #E2E8F0; --input-bg: #f8fafc;
+            --brand-color: #5B4EFA; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --accent-color: #E2A03F; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--main-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 100; overflow-y: auto; flex-shrink: 0; }
+        .sidebar::-webkit-scrollbar { display: none; }
+        .brand { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .brand h2 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; color: #38bdf8;}
+        .brand p { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        .menu-list { padding: 15px 10px; flex: 1; }
+        .menu-item { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 500; transition: 0.3s; }
+        .menu-item i { width: 24px; font-size: 16px; margin-right: 10px; text-align: center; }
+        .menu-item:hover { background-color: var(--sidebar-hover); color: white; }
+        .menu-item.active { background-color: var(--brand-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { background: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02); z-index: 10; position: sticky; top: 0; }
+        .header-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--main-bg); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-main); }
+        
+        .page-container { padding: 30px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+        /* CARDS */
+        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid var(--border-color); margin-bottom: 25px; }
+        .card-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; justify-content: space-between; }
+        
+        .input-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 10px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 12px 15px; border: 1.5px solid var(--border-color); border-radius: 10px; font-size: 14px; background-color: var(--input-bg); color: var(--text-main); font-weight: 600; outline: none; }
+        
+        .btn-action { background: var(--brand-color); color: white; padding: 12px 25px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s;}
+        .btn-action:active { transform: scale(0.95); }
+
+        /* PERFORMANCE DASHBOARD */
+        #performanceReport { display: none; }
+        
+        .agent-header { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--brand-color) 0%, #3b30bd 100%); padding: 25px; border-radius: 16px; color: white; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(91, 78, 250, 0.2); }
+        .agent-info h2 { font-size: 24px; font-weight: 800; margin-bottom: 5px; }
+        .agent-info p { font-size: 13px; opacity: 0.8; font-weight: 600; }
+        .rating-badge { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 12px; text-align: center; backdrop-filter: blur(5px); }
+        .rating-badge i { font-size: 24px; margin-bottom: 5px; }
+        .rating-text { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* METRICS SECTIONS */
+        .section-heading { font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; padding-bottom: 5px; margin-top: 15px; }
+        
+        .stats-grid { display: grid; gap: 15px; margin-bottom: 25px; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .stat-card .icon { font-size: 24px; color: var(--brand-color); margin-bottom: 10px; }
+        .stat-card h3 { font-size: 22px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .stat-card p { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+        .stat-card.accent-border { border-left: 5px solid var(--brand-color); }
+        .stat-card.warning-border { border-left: 5px solid #f59e0b; }
+        .stat-card.danger-border { border-left: 5px solid #ea580c; }
+        .stat-card.success-border { border-left: 5px solid #10b981; }
+
+        /* Progress Bars */
+        .progress-section { margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .progress-box { background: var(--input-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; }
+        .pb-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+        .pb-track { width: 100%; height: 12px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
+        .pb-fill { height: 100%; background: var(--success); transition: width 1s ease-in-out; }
+        .pb-fill.warning { background: var(--warning); }
+        .pb-fill.danger { background: var(--danger); }
+
+        /* Status Breakdown Indicators */
+        .status-breakdown { display: flex; gap: 10px; }
+        .bd-item { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px; border: 1px solid transparent; }
+        .bd-paid { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .bd-unpaid { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .bd-seizing { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+
+        /* TABLE */
+        .table-container { border: 1px solid var(--border-color); border-radius: 12px; background: white; overflow: hidden; }
+        .table-header { display: grid; grid-template-columns: 50px 1.5fr 1fr 1.5fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 15px 20px; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
+        .scrollable-body { max-height: 400px; overflow-y: auto; }
+        .scrollable-body::-webkit-scrollbar { width: 6px; }
+        .scrollable-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .data-row { display: grid; grid-template-columns: 50px 1.5fr 1fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+        .data-row:hover { background-color: #f8fafc; }
+        
+        .status-tag { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .tag-paid { background: #dcfce7; color: #166534; }
+        .tag-unpaid { background: #fee2e2; color: #991b1b; }
+        .tag-seizing { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; } 
+        .tag-pending { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .tag-direct { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+        
+        .type-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px; background: #e2e8f0; color: #475569; }
+        .type-mat { background: #fce7f3; color: #be185d; }
+
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; display: none; }
+        .spinner { font-size: 40px; color: var(--brand-color); margin-bottom: 15px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <i class="fas fa-circle-notch fa-spin spinner"></i>
+        <h3 id="loaderText" style="color:var(--text-main); font-size: 16px;">Analyzing Data...</h3>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="brand">
+            <h2>VPFC ADMIN</h2>
+            <p>Control Panel</p>
+        </div>
+        <div class="menu-list">
+            <a href="admin-dashboard.html" class="menu-item"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="admin-assign-accounts.html" class="menu-item"><i class="fas fa-tasks"></i> <span>Manage Assignments</span></a>
+            <a href="admin-complaint-box.html" class="menu-item"><i class="fas fa-exclamation-circle"></i> <span>Global Complaints</span></a>
+            <a href="admin-tc-visit-status.html" class="menu-item"><i class="fas fa-clipboard-check"></i> <span>All Visit Status</span></a>
+            <a href="admin-emp-performance.html" class="menu-item active"><i class="fas fa-chart-line"></i> <span>Emp. Performance</span></a>
+            <a href="admin-branch-report.html" class="menu-item"><i class="fas fa-building"></i> <span>Branch Report</span></a>
+            <a href="admin-overall-performance.html" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Overall Performance</span></a>
+            <a href="admin-attendance-log.html" class="menu-item"><i class="fas fa-user-clock"></i> <span>Attendance Log</span></a>
+            <a href="admin-employee-register.html" class="menu-item"><i class="fas fa-users"></i> <span>Employee Register</span></a>
+            <a href="admin-employee-biodata.html" class="menu-item"><i class="fas fa-address-card"></i> <span>Employee Bio Data</span></a>
+            <a href="admin-live-location.html" class="menu-item"><i class="fas fa-map-marker-alt"></i> <span>Live Radar</span></a>
+            <a href="admin-camp-history.html" class="menu-item"><i class="fas fa-campground"></i> <span>Camp History</span></a>
+            <a href="admin-settings.html" class="menu-item"><i class="fas fa-cog"></i> <span>System Settings</span></a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title">Employee Performance Analysis (Admin)</div>
+            <div class="header-right">
+                <div class="user-profile">
+                    <i class="fas fa-user-shield"></i> <span id="displayUserName">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-container">
+            
+            <div class="card">
+                <div class="card-title"><i class="fas fa-chart-bar"></i> Generate Performance Report</div>
+                <div class="input-row" style="align-items: flex-end;">
+                    <div class="input-group">
+                        <label>Select Month</label>
+                        <input type="month" id="monthFilter">
+                    </div>
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="branchSelect" onchange="loadEmployeesForBranch()">
+                            <option value="">-- Choose Branch --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Employee</label>
+                        <select id="employeeSelect" onchange="hideReport()">
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <button class="btn-action" onclick="generateReport()">
+                            <i class="fas fa-bolt"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERFORMANCE DASHBOARD -->
+            <div id="performanceReport">
+                
+                <div class="agent-header">
+                    <div class="agent-info">
+                        <h2 id="repEmpName">Agent Name</h2>
+                        <p id="repEmpDetails">ID: -- | Branch: -- | Report: <span id="repMonth"></span></p>
+                    </div>
+                    <div class="rating-badge" id="ratingBadge">
+                        <i class="fas fa-star" style="color: #fbbf24;" id="ratingIcon"></i>
+                        <div class="rating-text" style="color: #fbbf24;" id="ratingText">STAR PERFORMER</div>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: ASSIGNMENTS -->
+                <div class="section-heading"><i class="fas fa-file-invoice"></i> Assigned Accounts Breakdown</div>
+                <div class="stats-grid grid-3">
+                    <div class="stat-card accent-border">
+                        <h3 id="stTotAssAmt">₹0</h3>
+                        <p>Total Assigned (<span id="stTotAssCount">0</span>)</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stRegAssAmt">₹0</h3>
+                        <p>Regular Assigned (<span id="stRegAssCount">0</span>)</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stMatAssAmt" style="color:#be185d;">₹0</h3>
+                        <p>Matured Assigned (<span id="stMatAssCount">0</span>)</p>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: COLLECTIONS & SEIZINGS -->
+                <div class="section-heading"><i class="fas fa-motorcycle"></i> Cash Collections & Seizings</div>
+                <div class="stats-grid grid-3">
+                    <div class="stat-card success-border">
+                        <h3 id="stColAmt" style="color: var(--success);">₹0</h3>
+                        <p>Total Cash Collected</p>
+                    </div>
+                    <div class="stat-card warning-border">
+                        <h3 id="stRegSeizeAmt" style="color: #d97706;">₹0</h3>
+                        <p>Regular Seizing (<span id="stRegSeizeCount">0</span>)</p>
+                    </div>
+                    <div class="stat-card danger-border">
+                        <h3 id="stMatSeizeAmt" style="color: #c2410c;">₹0</h3>
+                        <p>Matured Seizing (<span id="stMatSeizeCount">0</span>)</p>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: EFFICIENCY & WORK -->
+                <div class="section-heading"><i class="fas fa-chart-line"></i> Field Efficiency & Coverage</div>
+                <div class="stats-grid grid-2">
+                    <div class="stat-card">
+                        <div class="icon" style="color: #0284c7;"><i class="fas fa-map-marked-alt"></i></div>
+                        <h3 id="statVisits">0 / 0</h3>
+                        <p>Visited / Assigned A/c</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon" style="color: var(--accent-color);"><i class="fas fa-calendar-check"></i></div>
+                        <h3 id="statAttendance">0 Days</h3>
+                        <p>Days Present</p>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-box">
+                        <div class="pb-header">
+                            <span>Cash Collection Efficiency</span>
+                            <span id="pbCollText">0%</span>
+                        </div>
+                        <div class="pb-track"><div class="pb-fill" id="pbCollFill" style="width: 0%;"></div></div>
+                    </div>
+                    <div class="progress-box">
+                        <div class="pb-header">
+                            <span>Account Coverage (Visits)</span>
+                            <span id="pbVisitText">0%</span>
+                        </div>
+                        <div class="pb-track"><div class="pb-fill" id="pbVisitFill" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+
+                <!-- Detailed Table -->
+                <div class="card">
+                    <div class="card-title">
+                        <div><i class="fas fa-list-alt"></i> Visited Accounts Master List</div>
+                        
+                        <div class="status-breakdown">
+                            <div class="bd-item bd-paid" title="Total Paid">
+                                <i class="fas fa-check-circle"></i> PAID: <span id="bdCountPaid">0</span>
+                            </div>
+                            <div class="bd-item bd-unpaid">
+                                <i class="fas fa-times-circle"></i> NOT PAID: <span id="bdCountNotPaid">0</span>
+                            </div>
+                            <div class="bd-item bd-seizing" title="Total Seizing">
+                                <i class="fas fa-truck-pickup"></i> SEIZING: <span id="bdCountSeizing">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <div>#</div>
+                            <div>HP Number</div>
+                            <div>Target (₹)</div>
+                            <div>Status</div>
+                            <div>Recv. / Seized (₹)</div>
+                            <div>Last Visit</div>
+                        </div>
+                        <div class="scrollable-body" id="tableBody">
+                            <!-- Rows injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvjFcKKiu4OMmQckYXMTejdBJh9tC6TjM",
+            authDomain: "sri-vishnu-priya-finance-c591f.firebaseapp.com",
+            databaseURL: "https://sri-vishnu-priya-finance-c591f-default-rtdb.firebaseio.com",
+            projectId: "sri-vishnu-priya-finance-c591f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.allEmployeesData = {}; 
+
+        const todayObj = new Date();
+        const rYear = todayObj.getFullYear();
+        const rMonth = String(todayObj.getMonth() + 1).padStart(2, '0');
+        const localMonthStr = `${rYear}-${rMonth}`;
+        document.getElementById('monthFilter').value = localMonthStr;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let tcId = user.email.split('@')[0];
+                try {
+                    let snap = await get(child(ref(db), `telewingsUsers/${tcId.toUpperCase()}`));
+                    if (!snap.exists()) snap = await get(child(ref(db), `telewingsUsers/${tcId.toLowerCase()}`));
+                    
+                    if (snap.exists()) {
+                        const userData = snap.val();
+                        if (userData.role === 'Admin' || userData.role === 'head') {
+                            window.tcName = userData.name || tcId.toUpperCase();
+                            document.getElementById('displayUserName').innerText = `${window.tcName} (ADMIN)`;
+                            await fetchEmployeesList();
+                        } else { 
+                            await signOut(auth);
+                            alert("Access Denied: Admin privileges required.");
+                            window.location.href = "index.html"; 
+                        }
+                    } else { window.location.href = "index.html"; }
+                } catch(e) { window.location.href = "index.html"; }
+            } else { window.location.href = "index.html"; }
+        });
+
+        async function fetchEmployeesList() {
+            try {
+                // 1. Fetch Branches directly from 'branches' node
+                const branchSnap = await get(ref(db, 'branches'));
+                if (branchSnap.exists()) {
+                    const branchSelect = document.getElementById('branchSelect');
+                    branchSelect.innerHTML = '<option value="">-- Choose Branch --</option>';
+                    branchSnap.forEach(child => {
+                        const opt = document.createElement('option');
+                        opt.value = child.val().name;
+                        opt.innerText = child.val().name;
+                        branchSelect.appendChild(opt);
+                    });
+                }
+
+                // 2. Fetch Employees Data
+                const empSnap = await get(child(ref(db), `employees`));
+                if (empSnap.exists()) {
+                    window.allEmployeesData = empSnap.val();
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        window.loadEmployeesForBranch = function() {
+            hideReport();
+            const selectedBranch = document.getElementById('branchSelect').value;
+            const empSelect = document.getElementById('employeeSelect');
+            empSelect.innerHTML = '<option value="">-- Select Employee --</option>'; 
+
+            if(!selectedBranch) return;
+
+            for(const empId in window.allEmployeesData) {
+                const emp = window.allEmployeesData[empId];
+                if(emp.branch && emp.branch.toUpperCase() === selectedBranch.toUpperCase()) {
+                    const opt = document.createElement('option');
+                    opt.value = empId;
+                    opt.innerText = `${emp.name} (${empId})`;
+                    empSelect.appendChild(opt);
+                }
+            }
+        }
+
+        window.hideReport = function() {
+            document.getElementById('performanceReport').style.display = 'none';
+        }
+
+        window.generateReport = async function() {
+            const empId = document.getElementById('employeeSelect').value;
+            const monthVal = document.getElementById('monthFilter').value; 
+
+            if(!empId || !monthVal) {
+                alert("Please select Month, Branch and Employee.");
+                return;
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            const empName = window.allEmployeesData[empId].name;
+            const empBranch = window.allEmployeesData[empId].branch;
+            
+            document.getElementById('repEmpName').innerText = empName.toUpperCase();
+            document.getElementById('repEmpDetails').innerHTML = `ID: <b>${empId}</b> &nbsp;|&nbsp; Branch: <b>${empBranch}</b> &nbsp;|&nbsp; Report: <b>${monthVal}</b>`;
+
+            // DEEP METRICS VARIABLES
+            let assignedAccounts = {}; 
+            let aTotCount = 0, aTotAmt = 0;
+            let aRegCount = 0, aRegAmt = 0;
+            let aMatCount = 0, aMatAmt = 0;
+
+            let visitedAccountsMap = {}; 
+            let totalCollectedAmt = 0;
+            let uniqueVisitsCount = 0;
+            
+            let sRegCount = 0, sRegAmt = 0;
+            let sMatCount = 0, sMatAmt = 0;
+
+            let presentDays = 0;
+            let cPaid = 0, cNotPaid = 0, cSeizing = 0;
+
+            // 1. FETCH ASSIGNMENTS (Categorize Regular vs Matured)
+            try {
+                const assignSnap = await get(child(ref(db), `assignments/${empId}/${monthVal}/details`));
+                if (assignSnap.exists()) {
+                    assignedAccounts = assignSnap.val();
+                    for(const hp in assignedAccounts) {
+                        let amt = parseFloat(assignedAccounts[hp].amt) || 0;
+                        let typeStr = String(assignedAccounts[hp].type || '').toUpperCase();
+                        
+                        aTotCount++;
+                        aTotAmt += amt;
+
+                        if(typeStr.includes('MATURED') || typeStr.includes('MATURE')) {
+                            aMatCount++;
+                            aMatAmt += amt;
+                        } else {
+                            aRegCount++;
+                            aRegAmt += amt;
+                        }
+                    }
+                }
+            } catch(e) { console.warn("Assignments fetch issue:", e); }
+
+            // 2. FETCH VISITS
+            try {
+                const visitsSnap = await get(child(ref(db), `visits/${monthVal}`));
+                if (visitsSnap.exists()) {
+                    const allVisits = visitsSnap.val();
+                    for(const vId in allVisits) {
+                        const v = allVisits[vId];
+                        if(v && v.eid && String(v.eid).trim().toLowerCase() === String(empId).trim().toLowerCase()) {
+                            
+                            const hp = v.hp || 'UNKNOWN';
+                            if(!visitedAccountsMap[hp]) {
+                                visitedAccountsMap[hp] = { collectedAmt: 0, seizedAmt: 0, latestStatus: v.stat, lastDate: v.date, vType: v.type || '' };
+                            }
+                            
+                            if(v.stat === 'PAID') {
+                                visitedAccountsMap[hp].collectedAmt += (parseFloat(v.amt) || 0);
+                            } else if (v.stat === 'SEIZING' || v.stat === 'SEEZING') {
+                                visitedAccountsMap[hp].seizedAmt += (parseFloat(v.amt) || 0);
+                            }
+                            
+                            visitedAccountsMap[hp].latestStatus = v.stat;
+                            visitedAccountsMap[hp].lastDate = v.date;
+                            visitedAccountsMap[hp].vType = v.type || ''; 
+                        }
+                    }
+                    uniqueVisitsCount = Object.keys(visitedAccountsMap).length;
+                    
+                    for(const hp in visitedAccountsMap) {
+                        totalCollectedAmt += visitedAccountsMap[hp].collectedAmt;
+                    }
+                }
+            } catch(e) { console.warn("Visits fetch issue:", e); }
+
+            // 3. FETCH ATTENDANCE
+            try {
+                let attSnap = await get(child(ref(db), `attendance/${empId}/${monthVal}`));
+                if (!attSnap.exists()) {
+                    attSnap = await get(child(ref(db), `attendance/${empId.toLowerCase()}/${monthVal}`));
+                }
+                if (attSnap.exists()) {
+                    presentDays = Object.keys(attSnap.val()).length;
+                }
+            } catch(e) { console.warn("Attendance fetch issue:", e); }
+
+            // CALC KPIS
+            let collectionEff = aTotAmt > 0 ? Math.round((totalCollectedAmt / aTotAmt) * 100) : 0;
+            if(collectionEff > 100) collectionEff = 100;
+
+            let coverageEff = aTotCount > 0 ? Math.round((uniqueVisitsCount / aTotCount) * 100) : 0;
+            if(coverageEff > 100) coverageEff = 100;
+
+            // RATING BADGE
+            const rIcon = document.getElementById('ratingIcon');
+            const rText = document.getElementById('ratingText');
+            if(collectionEff >= 75) { rIcon.className = "fas fa-star"; rIcon.style.color = "#fbbf24"; rText.innerText = "STAR PERFORMER"; rText.style.color = "#fbbf24"; } 
+            else if(collectionEff >= 50) { rIcon.className = "fas fa-thumbs-up"; rIcon.style.color = "#34d399"; rText.innerText = "GOOD"; rText.style.color = "#34d399"; } 
+            else if(collectionEff >= 25) { rIcon.className = "fas fa-minus-circle"; rIcon.style.color = "#fb923c"; rText.innerText = "AVERAGE"; rText.style.color = "#fb923c"; } 
+            else { rIcon.className = "fas fa-exclamation-triangle"; rIcon.style.color = "#f87171"; rText.innerText = "NEEDS IMPROVEMENT"; rText.style.color = "#f87171"; }
+
+            // INJECT TOP DATA
+            document.getElementById('stTotAssAmt').innerText = `₹${aTotAmt.toLocaleString('en-IN')}`; document.getElementById('stTotAssCount').innerText = aTotCount;
+            document.getElementById('stRegAssAmt').innerText = `₹${aRegAmt.toLocaleString('en-IN')}`; document.getElementById('stRegAssCount').innerText = aRegCount;
+            document.getElementById('stMatAssAmt').innerText = `₹${aMatAmt.toLocaleString('en-IN')}`; document.getElementById('stMatAssCount').innerText = aMatCount;
+
+            document.getElementById('stColAmt').innerText = `₹${totalCollectedAmt.toLocaleString('en-IN')}`;
+            
+            document.getElementById('statVisits').innerText = `${uniqueVisitsCount} / ${aTotCount}`;
+            document.getElementById('statAttendance').innerText = `${presentDays} Days`;
+
+            document.getElementById('pbCollText').innerText = `${collectionEff}%`;
+            const pColl = document.getElementById('pbCollFill'); pColl.style.width = `${collectionEff}%`; pColl.className = "pb-fill";
+            if(collectionEff < 40) pColl.classList.add("danger"); else if(collectionEff < 70) pColl.classList.add("warning");
+
+            document.getElementById('pbVisitText').innerText = `${coverageEff}%`;
+            const pVis = document.getElementById('pbVisitFill'); pVis.style.width = `${coverageEff}%`; pVis.className = "pb-fill";
+            if(coverageEff < 40) pVis.classList.add("danger"); else if(coverageEff < 70) pVis.classList.add("warning");
+
+            // PROCESS TABLE & SEIZING BREAKDOWN
+            let allHPs = new Set([...Object.keys(assignedAccounts), ...Object.keys(visitedAccountsMap)]);
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+            let index = 1;
+
+            if(allHPs.size === 0) {
+                tbody.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-weight: 600;">No assignments or visits found for this agent in ${monthVal}.</div>`;
+            } else {
+                for(const hp of allHPs) {
+                    const targetAmt = assignedAccounts[hp] ? (parseFloat(assignedAccounts[hp].amt) || 0) : 0;
+                    
+                    let statTag = `<span class="status-tag tag-pending">Pending / No Visit</span>`;
+                    if(!assignedAccounts[hp]) statTag = `<span class="status-tag tag-direct">Direct Visit</span>`;
+
+                    let displayAmtHtml = `<div style="font-weight: 700; color: var(--text-main);">₹0</div>`;
+                    let lastDate = "--";
+
+                    let accTypeStr = "";
+                    if(assignedAccounts[hp]) accTypeStr = String(assignedAccounts[hp].type || '').toUpperCase();
+                    else if(visitedAccountsMap[hp]) accTypeStr = String(visitedAccountsMap[hp].vType || '').toUpperCase();
+                    
+                    let isMatured = accTypeStr.includes('MATURED') || accTypeStr.includes('MATURE');
+                    let typeBadge = isMatured ? `<span class="type-badge type-mat">MATURED</span>` : `<span class="type-badge">REGULAR</span>`;
+
+                    if(visitedAccountsMap[hp]) {
+                        const vData = visitedAccountsMap[hp];
+                        let collectedAmt = vData.collectedAmt || 0;
+                        let seizedAmt = vData.seizedAmt || 0;
+                        lastDate = vData.lastDate;
+
+                        if(vData.latestStatus === 'PAID') { 
+                            statTag = `<span class="status-tag tag-paid">PAID</span>`;
+                            cPaid++; 
+                            displayAmtHtml = `<div style="font-weight: 800; color: var(--success);">₹${collectedAmt.toLocaleString('en-IN')}</div>`;
+                        }
+                        else if(vData.latestStatus === 'NOT PAID') { 
+                            statTag = `<span class="status-tag tag-unpaid">NOT PAID</span>`;
+                            cNotPaid++; 
+                            displayAmtHtml = `<div style="font-weight: 700; color: var(--text-main);">₹0</div>`;
+                        }
+                        else if(vData.latestStatus === 'SEIZING' || vData.latestStatus === 'SEEZING') { 
+                            statTag = `<span class="status-tag tag-seizing">SEIZING</span>`;
+                            cSeizing++; 
+                            displayAmtHtml = `<div style="font-weight: 800; color: #92400e;">₹${seizedAmt.toLocaleString('en-IN')} <span style="font-size:10px; color:#b45309; display:block;">(Seized)</span></div>`;
+                            
+                            if(isMatured) { sMatCount++; sMatAmt += seizedAmt; } 
+                            else { sRegCount++; sRegAmt += seizedAmt; }
+                        }
+                        else {
+                            statTag = `<span class="status-tag tag-unpaid">${vData.latestStatus}</span>`;
+                            displayAmtHtml = `<div style="font-weight: 700; color: var(--text-main);">₹0</div>`;
+                        }
+                    }
+
+                    let rowHtml = `
+                        <div class="data-row">
+                            <div style="font-weight: 800; color: var(--brand-color);">${index}</div>
+                            <div>
+                                <div style="font-weight: 700;">${hp}</div>
+                                <div>${typeBadge}</div>
+                            </div>
+                            <div>₹${targetAmt.toLocaleString('en-IN')}</div>
+                            <div>${statTag}</div>
+                            <div>${displayAmtHtml}</div>
+                            <div style="font-size: 11px; font-weight: 600;">${lastDate}</div>
+                        </div>
+                    `;
+                    tbody.innerHTML += rowHtml;
+                    index++;
+                }
+            }
+
+            document.getElementById('stRegSeizeAmt').innerText = `₹${sRegAmt.toLocaleString('en-IN')}`; document.getElementById('stRegSeizeCount').innerText = sRegCount;
+            document.getElementById('stMatSeizeAmt').innerText = `₹${sMatAmt.toLocaleString('en-IN')}`; document.getElementById('stMatSeizeCount').innerText = sMatCount;
+
+            document.getElementById('bdCountPaid').innerText = cPaid;
+            document.getElementById('bdCountNotPaid').innerText = cNotPaid;
+            document.getElementById('bdCountSeizing').innerText = cSeizing;
+
+            document.getElementById('performanceReport').style.display = 'block';
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

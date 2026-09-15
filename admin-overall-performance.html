@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPFC Admin - Overall Performance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --sidebar-bg: #1e293b; --sidebar-hover: #334155;
+            --main-bg: #F4F7FE; --card-bg: #FFFFFF;
+            --text-main: #2B3674; --text-muted: #A3AED0;
+            --border-color: #E2E8F0; --input-bg: #f8fafc;
+            --brand-color: #5B4EFA; --success: #10b981; --danger: #ef4444; 
+            --secondary: #8b5cf6; --seized: #991b1b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--main-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 100; overflow-y: auto; flex-shrink: 0; }
+        .sidebar::-webkit-scrollbar { display: none; }
+        .brand { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .brand h2 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; color: #38bdf8;}
+        .brand p { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        .menu-list { padding: 15px 10px; flex: 1; }
+        .menu-item { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 500; transition: 0.3s; }
+        .menu-item i { width: 24px; font-size: 16px; margin-right: 10px; text-align: center; }
+        .menu-item:hover { background-color: var(--sidebar-hover); color: white; }
+        .menu-item.active { background-color: var(--brand-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { background: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02); z-index: 10; position: sticky; top: 0; }
+        .header-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--main-bg); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-main); }
+        
+        .page-container { padding: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* CARDS & FILTERS */
+        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid var(--border-color); margin-bottom: 25px; }
+        
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; background-color: var(--input-bg); color: var(--text-main); font-weight: 600; outline: none; }
+        .input-group select:focus, .input-group input:focus { border-color: var(--brand-color); }
+        
+        .btn-action { background: var(--success); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; width: 100%;}
+        .btn-action:active { transform: scale(0.98); }
+        .btn-print { background: var(--text-main); color: white; padding: 8px 15px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+        /* SUMMARY CARDS */
+        .summary-grid { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-card { padding: 15px 20px; border-radius: 12px; flex: 1; text-align: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .solid-dark { background: var(--text-main); }
+        .solid-green { background: var(--success); }
+        .stat-card h3 { font-size: 24px; font-weight: 900; margin-bottom: 5px; }
+        .stat-card p { font-size: 11px; font-weight: 700; text-transform: uppercase; opacity: 0.9; }
+
+        /* TABLE STYLES */
+        .table-container { border: 1px solid var(--border-color); border-radius: 12px; background: white; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; text-align: center; }
+        th { padding: 12px; font-size: 11px; font-weight: 800; border: 1px solid var(--border-color); color: white; text-transform: uppercase; }
+        th[rowspan="2"] { background: var(--text-main); }
+        td { padding: 10px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-color); color: var(--text-main); }
+        tr:hover { background-color: #f8fafc; }
+
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; color: white;}
+        .b-green { background: var(--success); }
+        .b-red { background: var(--danger); }
+
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+
+        @media print {
+            .sidebar, .header, .filter-grid, .no-print { display: none !important; }
+            .main-content { overflow: visible; }
+            .page-container { padding: 0; }
+            .card { box-shadow: none; border: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <i class="fas fa-circle-notch fa-spin" style="font-size: 40px; color: var(--brand-color); margin-bottom: 15px;"></i>
+        <h3 style="color:var(--text-main); font-size: 16px;">Generating Report...</h3>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar no-print">
+        <div class="brand">
+            <h2>VPFC ADMIN</h2>
+            <p>Control Panel</p>
+        </div>
+        <div class="menu-list">
+            <a href="admin-dashboard.html" class="menu-item"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="admin-assign-accounts.html" class="menu-item"><i class="fas fa-tasks"></i> <span>Manage Assignments</span></a>
+            <a href="admin-complaint-box.html" class="menu-item"><i class="fas fa-exclamation-circle"></i> <span>Global Complaints</span></a>
+            <a href="admin-tc-visit-status.html" class="menu-item"><i class="fas fa-clipboard-check"></i> <span>All Visit Status</span></a>
+            <a href="admin-emp-performance.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Emp. Performance</span></a>
+            <a href="admin-branch-report.html" class="menu-item"><i class="fas fa-building"></i> <span>Branch Report</span></a>
+            <a href="admin-overall-performance.html" class="menu-item active"><i class="fas fa-chart-pie"></i> <span>Overall Performance</span></a>
+            <a href="admin-attendance-log.html" class="menu-item"><i class="fas fa-user-clock"></i> <span>Attendance Log</span></a>
+            <a href="admin-employee-register.html" class="menu-item"><i class="fas fa-users"></i> <span>Employee Register</span></a>
+            <a href="admin-employee-biodata.html" class="menu-item"><i class="fas fa-address-card"></i> <span>Employee Bio Data</span></a>
+            <a href="admin-live-location.html" class="menu-item"><i class="fas fa-map-marker-alt"></i> <span>Live Radar</span></a>
+            <a href="admin-camp-history.html" class="menu-item"><i class="fas fa-campground"></i> <span>Camp History</span></a>
+            <a href="admin-settings.html" class="menu-item"><i class="fas fa-cog"></i> <span>System Settings</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header no-print">
+            <div class="header-title">Overall Collection Report (Admin)</div>
+            <div class="user-profile"><i class="fas fa-user-shield"></i> <span id="displayUserName">Admin</span></div>
+        </div>
+
+        <div class="page-container">
+            <div class="card" style="padding-bottom: 10px;">
+                
+                <!-- FILTERS -->
+                <div class="filter-grid no-print">
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="ins-branch-sel">
+                            <option value="ALL">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Month</label>
+                        <input type="month" id="ins-month-val">
+                    </div>
+                    <div class="input-group">
+                        <label>Account Type</label>
+                        <select id="ins-type-sel">
+                            <option value="Both">All (Reg + Mat)</option>
+                            <option value="Regular">Regular Only</option>
+                            <option value="Matured">Matured Only</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>INS Range (Optional)</label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="number" id="ins-from" placeholder="From">
+                            <input type="number" id="ins-to" placeholder="To">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <button class="btn-action" onclick="renderInsReport()"><i class="fas fa-bolt"></i> GENERATE</button>
+                    </div>
+                </div>
+
+                <!-- RESULTS SECTION -->
+                <div id="resultsSection" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; margin-top: 10px;">
+                        <h5 style="margin:0; font-size:16px; color:var(--text-main);">COLLECTION DATA BY INS</h5>
+                        <button onclick="window.print()" class="btn-print no-print"><i class="fas fa-print"></i> PRINT REPORT</button>
+                    </div>
+                    
+                    <div id="ins-summary" class="summary-grid"></div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">INS</th>
+                                    <th rowspan="2">Assign Cnt<br>(Amt)</th>
+                                    <th colspan="2" style="background:#1e40af;">PCR</th>
+                                    <th colspan="2" style="background:#475569;">LOCK AMT</th>
+                                    <th colspan="2" style="background:#047857;">OFFICE QR</th>
+                                    <th colspan="2" style="background:#b45309;">OP</th>
+                                    <th colspan="2" style="background:#991b1b;">SEIZED</th>
+                                    <th rowspan="2" style="background:var(--secondary);">TOTAL COL</th>
+                                    <th rowspan="2" style="background:var(--danger);">REM ₹</th>
+                                    <th rowspan="2" style="background:#3b82f6;">PERC (%)</th>
+                                </tr>
+                                <tr>
+                                    <th style="background:#1e40af; border-top:1px solid rgba(255,255,255,0.2);">Cnt</th><th style="background:#1e40af; border-top:1px solid rgba(255,255,255,0.2);">Amt</th>
+                                    <th style="background:#475569; border-top:1px solid rgba(255,255,255,0.2);">Cnt</th><th style="background:#475569; border-top:1px solid rgba(255,255,255,0.2);">Amt</th>
+                                    <th style="background:#047857; border-top:1px solid rgba(255,255,255,0.2);">Cnt</th><th style="background:#047857; border-top:1px solid rgba(255,255,255,0.2);">Amt</th>
+                                    <th style="background:#b45309; border-top:1px solid rgba(255,255,255,0.2);">Cnt</th><th style="background:#b45309; border-top:1px solid rgba(255,255,255,0.2);">Amt</th>
+                                    <th style="background:#991b1b; border-top:1px solid rgba(255,255,255,0.2);">Cnt</th><th style="background:#991b1b; border-top:1px solid rgba(255,255,255,0.2);">Amt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ins-table-body"></tbody>
+                            <tfoot id="ins-table-foot" style="background:#fef08a; color:#854d0e; font-weight:800;"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvjFcKKiu4OMmQckYXMTejdBJh9tC6TjM",
+            authDomain: "sri-vishnu-priya-finance-c591f.firebaseapp.com",
+            databaseURL: "https://sri-vishnu-priya-finance-c591f-default-rtdb.firebaseio.com",
+            projectId: "sri-vishnu-priya-finance-c591f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        window.allEmps = [];
+
+        // Setup Current Month
+        const today = new Date();
+        document.getElementById('ins-month-val').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let tcId = user.email.split('@')[0];
+                try {
+                    let snap = await get(child(ref(db), `telewingsUsers/${tcId.toUpperCase()}`));
+                    if (!snap.exists()) snap = await get(child(ref(db), `telewingsUsers/${tcId.toLowerCase()}`));
+
+                    if (snap.exists() && (snap.val().role === 'Admin' || snap.val().role === 'head')) {
+                        document.getElementById('displayUserName').innerText = `${snap.val().name || tcId.toUpperCase()} (ADMIN)`;
+                        await fetchInitialData();
+                    } else {
+                        await signOut(auth);
+                        alert("Access Denied: Admin privileges required.");
+                        window.location.href = "index.html";
+                    }
+                } catch(e) { window.location.href = "index.html"; }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        async function fetchInitialData() {
+            try {
+                // Fetch Branches strictly from DB node 'branches'
+                const branchSnap = await get(ref(db, 'branches'));
+                if (branchSnap.exists()) {
+                    const bSelect = document.getElementById('ins-branch-sel');
+                    bSelect.innerHTML = '<option value="ALL">All Branches</option>';
+                    branchSnap.forEach(child => {
+                        const bName = child.val().name;
+                        bSelect.innerHTML += `<option value="${bName}">${bName}</option>`;
+                    });
+                }
+
+                // Fetch Employees for Mapping
+                const empSnap = await get(ref(db, `employees`));
+                if (empSnap.exists()) {
+                    const data = empSnap.val();
+                    for(let id in data) {
+                        window.allEmps.push({ id: id, name: data[id].name, branch: data[id].branch });
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        window.renderInsReport = async function() {
+            const branch = document.getElementById('ins-branch-sel').value; 
+            const mo = document.getElementById('ins-month-val').value; 
+            const type = document.getElementById('ins-type-sel').value; 
+            const fromVal = document.getElementById('ins-from').value; 
+            const toVal = document.getElementById('ins-to').value; 
+
+            if(!mo) return alert("Select Month!"); 
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('resultsSection').style.display = 'none';
+
+            try {
+                // Determine Employees
+                let eIds = [];
+                if(branch === 'ALL') {
+                    eIds = window.allEmps.map(e => e.id);
+                } else {
+                    eIds = window.allEmps.filter(e => e.branch === branch).map(e => e.id);
+                }
+
+                // Initialize INS Dictionary
+                let insD = {}; 
+                let isC = fromVal && toVal; 
+                let st = isC ? parseInt(fromVal) : 1, en = isC ? parseInt(toVal) : 9; 
+                
+                if(isC) { 
+                    for(let i = st; i <= en; i++) insD[i.toString()] = { tA: 0, tAm: 0, pC:0, pA:0, lC:0, lA:0, qC:0, qA:0, oC:0, oA:0, sC:0, sA:0, colAmt:0 }; 
+                } else { 
+                    for(let i = 1; i <= 9; i++) insD[i.toString()] = { tA: 0, tAm: 0, pC:0, pA:0, lC:0, lA:0, qC:0, qA:0, oC:0, oA:0, sC:0, sA:0, colAmt:0 }; 
+                    insD["10+"] = { tA: 0, tAm: 0, pC:0, pA:0, lC:0, lA:0, qC:0, qA:0, oC:0, oA:0, sC:0, sA:0, colAmt:0 }; 
+                } 
+
+                // 1. Fetch Assignments
+                let allAss = {};
+                for (let id of eIds) {
+                    const snap = await get(ref(db, `assignments/${id}/${mo}/details`));
+                    if (snap.exists()) allAss[id] = snap.val();
+                }
+
+                // Process Assignments
+                for (let id in allAss) {
+                    let details = allAss[id];
+                    for (let hp in details) {
+                        let accType = details[hp].type || 'Regular';
+                        let valid = (type === 'Both') || (type === 'Regular' && accType === 'Regular') || (type === 'Matured' && accType === 'Matured');
+                        
+                        if (valid) {
+                            let iv = parseInt(details[hp].ins) || 1; 
+                            let k = isC ? (iv >= st && iv <= en ? iv.toString() : "") : (iv >= 10 ? "10+" : iv.toString()); 
+                            if(k && insD[k]) { 
+                                insD[k].tA++; 
+                                insD[k].tAm += parseFloat(details[hp].amt) || 0; 
+                            } 
+                        }
+                    }
+                }
+
+                // 2. Fetch Visits
+                const visitsSnap = await get(ref(db, `visits/${mo}`));
+                if (visitsSnap.exists()) {
+                    let vData = visitsSnap.val();
+                    
+                    let groupedVisits = {};
+                    for (let vId in vData) {
+                        let v = vData[vId];
+                        if (eIds.includes(v.eid)) {
+                            let assignedAcc = allAss[v.eid] ? allAss[v.eid][v.hp] : null;
+                            if (assignedAcc) {
+                                let accType = assignedAcc.type || 'Regular';
+                                let valid = (type === 'Both') || (type === 'Regular' && accType === 'Regular') || (type === 'Matured' && accType === 'Matured');
+                                
+                                if (valid) {
+                                    if (!groupedVisits[v.hp]) {
+                                        groupedVisits[v.hp] = {
+                                            ins: parseInt(assignedAcc.ins) || 1,
+                                            targetAmt: parseFloat(assignedAcc.amt) || 0,
+                                            totalCollected: 0,
+                                            latestType: v.type || '',
+                                            isSeized: false
+                                        };
+                                    }
+                                    
+                                    if (v.stat === 'PAID' || v.stat === 'Paid') {
+                                        groupedVisits[v.hp].totalCollected += (parseFloat(v.amt) || 0);
+                                        groupedVisits[v.hp].latestType = v.type;
+                                    } else if (v.stat === 'SEIZING' || v.stat === 'Seized') {
+                                        groupedVisits[v.hp].isSeized = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Map Unique HP collections to insD
+                    for (let hp in groupedVisits) {
+                        let gv = groupedVisits[hp];
+                        let iv = gv.ins;
+                        let k = isC ? (iv >= st && iv <= en ? iv.toString() : "") : (iv >= 10 ? "10+" : iv.toString()); 
+                        
+                        if (k && insD[k]) {
+                            if (gv.isSeized) {
+                                insD[k].sC++; 
+                                insD[k].sA += gv.targetAmt; 
+                            } else if (gv.totalCollected > 0) {
+                                insD[k].colAmt += gv.totalCollected;
+                                let vType = gv.latestType ? gv.latestType.toUpperCase() : '';
+                                
+                                if(vType.includes('PCR')){ insD[k].pC++; insD[k].pA += gv.totalCollected; } 
+                                else if(vType.includes('LOCK')){ insD[k].lC++; insD[k].lA += gv.totalCollected; } 
+                                else if(vType.includes('QR')){ insD[k].qC++; insD[k].qA += gv.totalCollected; } 
+                                else if(vType.includes('OP')){ insD[k].oC++; insD[k].oA += gv.totalCollected; } 
+                            }
+                        }
+                    }
+                }
+
+                // 3. Render HTML
+                let h='', ttA=0, ttAm=0, tpC=0, tpA=0, tlC=0, tlA=0, tqC=0, tqA=0, toC=0, toA=0, tsC=0, tsA=0, tcAm=0, tRem=0; 
+                
+                Object.keys(insD).forEach(k => { 
+                    let d = insD[k]; 
+                    let rem = Math.max(0, d.tAm - d.colAmt - d.sA); 
+                    let pct = d.tAm > 0 ? (((d.colAmt + d.sA) / d.tAm) * 100).toFixed(1) : 0; 
+                    let pc = pct >= 100 ? 'b-green' : 'b-red'; 
+                    
+                    ttA += d.tA; ttAm += d.tAm; tpC += d.pC; tpA += d.pA; tlC += d.lC; tlA += d.lA; 
+                    tqC += d.qC; tqA += d.qA; toC += d.oC; toA += d.oA; tsC += d.sC; tsA += d.sA; 
+                    tcAm += d.colAmt; tRem += rem; 
+                    
+                    let displayTotalCol = d.colAmt + d.sA; 
+                    h += `<tr>
+                        <td style="text-align:left;"><b>${k}</b></td>
+                        <td><span style="font-size:14px; color:var(--brand-color); font-weight:900;">${d.tA}</span> <br><small style="color:gray;">(₹${d.tAm})</small></td>
+                        <td>${d.pC}</td> <td><b style="color:#1e40af">₹${d.pA}</b></td>
+                        <td>${d.lC}</td> <td><b style="color:#475569">₹${d.lA}</b></td>
+                        <td>${d.qC}</td> <td><b style="color:#047857">₹${d.qA}</b></td>
+                        <td>${d.oC}</td> <td><b style="color:#b45309">₹${d.oA}</b></td>
+                        <td><b style="color:var(--seized)">${d.sC}</b></td> <td><b style="color:#991b1b">₹${d.sA}</b></td>
+                        <td><b style="color:var(--secondary); font-size:14px;">₹${displayTotalCol}</b></td>
+                        <td><b style="color:var(--danger)">₹${rem}</b></td>
+                        <td><span class="badge ${pc}">${pct}%</span></td>
+                    </tr>`; 
+                }); 
+                
+                if(ttA === 0) h = '<tr><td colspan="15" align="center" style="padding:20px; color:gray;">No Data Available</td></tr>'; 
+                document.getElementById('ins-table-body').innerHTML = h; 
+                
+                let totalPerc = ttAm > 0 ? (((tcAm + tsA) / ttAm) * 100).toFixed(1) : 0;
+                
+                document.getElementById('ins-table-foot').innerHTML = `<tr>
+                    <td style="text-align:left;">GRAND TOTAL</td>
+                    <td>${ttA} <br><small>(₹${ttAm})</small></td>
+                    <td>${tpC}</td> <td>₹${tpA}</td>
+                    <td>${tlC}</td> <td>₹${tlA}</td>
+                    <td>${tqC}</td> <td>₹${tqA}</td>
+                    <td>${toC}</td> <td>₹${toA}</td>
+                    <td>${tsC}</td> <td>₹${tsA}</td>
+                    <td>₹${tcAm + tsA}</td>
+                    <td>₹${tRem}</td>
+                    <td>${totalPerc}%</td>
+                </tr>`; 
+                
+                let statsHtml = `
+                    <div class="stat-card solid-dark"><h3>${ttA}</h3><p>Total Assigned Accounts</p></div>
+                    <div class="stat-card solid-dark"><h3>₹${ttAm}</h3><p>Total Target Amount</p></div>
+                    <div class="stat-card solid-green"><h3>₹${tcAm + tsA}</h3><p>Total Collection & Seized</p></div>
+                `;
+                document.getElementById('ins-summary').innerHTML = statsHtml; 
+                
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('resultsSection').style.display = 'block';
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loadingOverlay').style.display = 'none';
+                alert("Error generating report.");
+            }
+        }
+    </script>
+</body>
+</html>

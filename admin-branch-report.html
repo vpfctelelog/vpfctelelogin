@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VPFC Admin - Mega Branch Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root{--sidebar-bg:#1e293b;--sidebar-hover:#334155;--main-bg:#F4F7FE;--card-bg:#FFFFFF;--text-main:#2B3674;--text-muted:#A3AED0;--border-color:#E2E8F0;--input-bg:#f8fafc;--brand-color:#5B4EFA;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--accent-color:#E2A03F}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+        
+        body { background-color: var(--main-bg); display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar{width:260px; height:100vh; background-color:var(--sidebar-bg);color:#fff;display:flex;flex-direction:column;transition:.3s;z-index:100;overflow-y:auto;flex-shrink:0}
+        .sidebar::-webkit-scrollbar{display:none}
+        .brand{padding:25px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
+        .brand h2{font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:5px; color: #38bdf8;}
+        .brand p{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px}
+        .menu-list{padding:15px 10px;flex:1}
+        .menu-item{display:flex;align-items:center;padding:12px 15px;color:rgba(255,255,255,.8);text-decoration:none;border-radius:10px;margin-bottom:5px;font-size:14px;font-weight:500;transition:.3s}
+        .menu-item i{width:24px;font-size:16px;margin-right:10px;text-align:center}
+        .menu-item:hover{background-color:var(--sidebar-hover);color:#fff;}
+        .menu-item.active{background-color:var(--brand-color);color:white;font-weight:700;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+        
+        .main-content{flex:1; display:flex; flex-direction:column; height: 100vh; overflow-y:auto; overflow-x:hidden;}
+        .header{background:var(--card-bg);padding:15px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.02);z-index:10;position:sticky;top:0;}
+        .header-title{font-size:20px;font-weight:700;color:var(--text-main)}
+        .user-profile{display:flex;align-items:center;gap:10px;background:var(--main-bg);padding:6px 15px;border-radius:20px;font-size:13px;font-weight:700;color:var(--text-main)}
+        .page-container{padding:20px;max-width:1200px;margin:0 auto;width:100%}
+        
+        .card{background:var(--card-bg);padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.03);border:1px solid var(--border-color);margin-bottom:20px}
+        .card-header-flex{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+        .card-title{font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:15px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-color);padding-bottom:10px}
+        .card-title.no-border{border-bottom:none;padding-bottom:0;margin-bottom:0;}
+        .input-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:5px}
+        .input-group label{display:block;font-size:12px;font-weight:600;color:#4b5563;margin-bottom:6px;text-transform:uppercase}
+        .input-group select,.input-group input{width:100%;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:8px;font-size:13px;background-color:var(--input-bg);color:var(--text-main);font-weight:600;outline:none}
+        .btn-action{background:var(--brand-color);color:#fff;padding:12px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+        .filter-select{padding:8px 12px;border:1px solid var(--brand-color);border-radius:6px;font-size:12px;font-weight:700;color:var(--brand-color);background:#f0f5ff;outline:none;cursor:pointer}
+        
+        .dashboard-header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:20px;border-radius:12px;color:#fff;margin-bottom:20px;}
+        .dashboard-info h2{font-size:20px;font-weight:800;margin-bottom:5px;color:var(--accent-color)}
+        .efficiency-badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);padding:10px 20px;border-radius:10px;text-align:center}
+        .section-heading{font-size:13px;font-weight:800;color:var(--text-main);margin-bottom:12px;margin-top:20px;text-transform:uppercase;display:flex;align-items:center;gap:8px;border-left:4px solid var(--brand-color);padding-left:8px}
+        
+        .stats-grid{display:grid;gap:12px;margin-bottom:15px}
+        .grid-4{grid-template-columns:repeat(4,1fr)}
+        .grid-3{grid-template-columns:repeat(3,1fr)}
+        .grid-2{grid-template-columns:repeat(2,1fr)}
+
+        .modern-stat-card { background: #ffffff; border-radius: 12px; padding: 12px 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; }
+        .msc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .msc-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 14px; }
+        .msc-icon.primary { background: #e0e7ff; color: var(--brand-color); }
+        .msc-icon.success { background: #dcfce7; color: var(--success); }
+        .msc-icon.warning { background: #ffedd5; color: #ea580c; }
+        .msc-icon.danger { background: #fce7f3; color: #be185d; }
+        .msc-title { font-size: 11.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; line-height: 1.2; width:70%; }
+        
+        .msc-val { font-size: 20px; font-weight: 900; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.5px; }
+        .msc-sub { font-size: 10px; font-weight: 700; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; width: max-content; }
+        .msc-sub.danger-tag { background: #fee2e2; color: #991b1b; }
+        .msc-sub.success-tag { background: #dcfce7; color: #166534; }
+        .msc-sub.primary-tag { background: #e0e7ff; color: #3730a3; }
+        
+        .table-container{border:1px solid var(--border-color);border-radius:10px;background:#fff;overflow-x:auto}
+        .table-header{display:grid;grid-template-columns:50px 200px 100px 120px 120px 100px;gap:10px;background:#f8fafc;padding:12px 15px;border-bottom:1px solid var(--border-color);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;min-width:800px}
+        .data-row{display:grid;grid-template-columns:50px 200px 100px 120px 120px 100px;gap:10px;align-items:center;padding:12px 15px;border-bottom:1px solid #f1f5f9;font-size:12px;min-width:800px}
+        .agent-table-header{display:grid;grid-template-columns:50px 1.5fr 80px 80px 1.2fr 1.5fr;gap:10px;background:#f8fafc;padding:12px 15px;border-bottom:1px solid var(--border-color);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;min-width:700px}
+        .agent-data-row{display:grid;grid-template-columns:50px 1.5fr 80px 80px 1.2fr 1.5fr;gap:10px;align-items:center;padding:12px 15px;border-bottom:1px solid #f1f5f9;font-size:12px;min-width:700px}
+        .agent-name{font-weight:800;color:var(--brand-color);font-size:13px;cursor:pointer;text-decoration:underline;margin-bottom:2px}
+        .agent-id{font-size:10px;color:var(--text-muted);font-weight:600}
+        .rank-badge{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;background:#e2e8f0;color:#475569}
+        .rank-1{background:#fef08a;color:#854d0e}
+        
+        .badge-type{padding:3px 6px;border-radius:4px;font-size:10px;font-weight:800;background:#e2e8f0;color:#475569}
+        .badge-type.matured{background:#fce7f3;color:#be185d}
+        .status-tag{padding:4px 8px;border-radius:4px;font-size:10px;font-weight:800;text-transform:uppercase; display:inline-block;}
+        .tag-paid{background:#dcfce7;color:#166534;border:1px solid #86efac}
+        .tag-seizing{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+        .tag-unpaid{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .tag-pending{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+        
+        #loadingOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.9);z-index:999999;display:flex;flex-direction:column;justify-content:center;align-items:center;display:none}
+        .spinner{font-size:35px;color:var(--brand-color);margin-bottom:10px}
+        
+        #branchDashboardView { display: none; }
+        #agentDetailedView { display: none; }
+
+        /* Excel Download Button Style */
+        .btn-excel { background: #10b981; color: white; padding: 8px 15px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-excel:hover { background: #059669; }
+
+        @media screen and (max-width:1200px){
+            body { display: flex !important; flex-direction: column !important; height: 100vh !important; overflow: hidden !important; }
+            .sidebar { width: 100% !important; height: 60px !important; flex-direction: row !important; padding: 5px !important; border-bottom: 1px solid var(--border-color) !important; overflow-x: auto !important; overflow-y: hidden !important; flex-shrink: 0 !important; }
+            .sidebar .brand { display: none !important; }
+            .menu-list { display: flex !important; flex-direction: row !important; padding: 0 !important; gap: 8px !important; width: max-content !important; align-items: center; }
+            .menu-item { margin-bottom: 0 !important; white-space: nowrap !important; padding: 8px 12px !important; background: rgba(255,255,255,.1); font-size: 12px; }
+            .main-content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; overflow-x: hidden !important; display: block !important; }
+            .header { padding: 12px 15px !important; position: sticky; top: 0; z-index: 100; }
+            .page-container { padding: 15px !important; padding-bottom: 50px !important; }
+            .stats-grid.grid-4, .stats-grid.grid-3, .stats-grid.grid-2 { grid-template-columns: 1fr 1fr !important; }
+            .input-row { grid-template-columns: 1fr !important; }
+            .dashboard-header { flex-direction: column !important; gap: 12px !important; text-align: center !important; padding: 15px !important; }
+            .efficiency-badge { width: 100% !important; }
+            .card { padding: 15px !important; margin-bottom: 15px !important; }
+            .card-header-flex { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .filter-select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <i class="fas fa-circle-notch fa-spin spinner"></i>
+        <h3 id="loaderText" style="color:var(--text-main); font-size: 14px;">Compiling Data...</h3>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="brand">
+            <h2>VPFC ADMIN</h2>
+            <p>Control Panel</p>
+        </div>
+        <div class="menu-list">
+            <a href="admin-dashboard.html" class="menu-item"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="admin-assign-accounts.html" class="menu-item"><i class="fas fa-tasks"></i> <span>Manage Assignments</span></a>
+            <a href="admin-complaint-box.html" class="menu-item"><i class="fas fa-exclamation-circle"></i> <span>Global Complaints</span></a>
+            <a href="admin-tc-visit-status.html" class="menu-item"><i class="fas fa-clipboard-check"></i> <span>All Visit Status</span></a>
+            <a href="admin-emp-performance.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Emp. Performance</span></a>
+            <a href="admin-branch-report.html" class="menu-item active"><i class="fas fa-building"></i> <span>Branch Report</span></a>
+            <a href="admin-overall-performance.html" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Overall Performance</span></a>
+            <a href="admin-attendance-log.html" class="menu-item"><i class="fas fa-user-clock"></i> <span>Attendance Log</span></a>
+            <a href="admin-employee-register.html" class="menu-item"><i class="fas fa-users"></i> <span>Employee Register</span></a>
+            <a href="admin-employee-biodata.html" class="menu-item"><i class="fas fa-address-card"></i> <span>Employee Bio Data</span></a>
+            <a href="admin-live-location.html" class="menu-item"><i class="fas fa-map-marker-alt"></i> <span>Live Radar</span></a>
+            <a href="admin-camp-history.html" class="menu-item"><i class="fas fa-campground"></i> <span>Camp History</span></a>
+            <a href="admin-settings.html" class="menu-item"><i class="fas fa-cog"></i> <span>System Settings</span></a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title" id="mainHeaderTitle" style="font-size:16px;">Mega Branch Report (Admin)</div>
+            <div class="user-profile"><i class="fas fa-user-shield"></i> <span id="displayUserName">Admin</span></div>
+        </div>
+
+        <div class="page-container">
+            
+            <!-- SEARCH CARD -->
+            <div class="card" id="searchCard">
+                <div class="card-title no-border"><i class="fas fa-building"></i> Select Branch & Month</div>
+                <div class="input-row" style="margin-top: 12px;">
+                    <div class="input-group">
+                        <label>Select Month</label>
+                        <input type="month" id="monthFilter">
+                    </div>
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="branchSelect" onchange="hideReport()">
+                            <option value="">-- Choose Branch --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-action" onclick="generateBranchReport()">
+                            <i class="fas fa-chart-pie"></i> View Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 1: BRANCH DASHBOARD -->
+            <div id="branchDashboardView">
+                <div class="dashboard-header">
+                    <div class="dashboard-info">
+                        <h2><i class="fas fa-map-marker-alt"></i> <span id="repBranchName">BRANCH NAME</span></h2>
+                        <p style="font-size:12px;">Report for <span id="repMonthStr">--</span></p>
+                    </div>
+                    <div class="efficiency-badge" id="brEfficiencyBadge">
+                        <h3 id="brCollectionEff" style="font-size:20px;">0%</h3>
+                        <div style="font-size: 10px; font-weight: 800; opacity:0.9;">TOTAL EFFICIENCY</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid grid-4">
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Active Agents</div><div class="msc-icon primary"><i class="fas fa-users"></i></div></div><div class="msc-val" id="bTotAgents">0</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Total Target</div><div class="msc-icon primary"><i class="fas fa-bullseye"></i></div></div><div class="msc-val">₹<span id="bTotAssAmt">0</span></div></div>
+                    <div class="modern-stat-card" style="border-color:#bbf7d0;"><div class="msc-header"><div class="msc-title" style="color:var(--success);">Collected</div><div class="msc-icon success"><i class="fas fa-coins"></i></div></div><div class="msc-val" style="color:var(--success);">₹<span id="bTotColAmt">0</span></div></div>
+                    <div class="modern-stat-card" style="border-color:#fed7aa;"><div class="msc-header"><div class="msc-title" style="color:#ea580c;">Seized</div><div class="msc-icon warning"><i class="fas fa-truck-pickup"></i></div></div><div class="msc-val" style="color:#ea580c;">₹<span id="bTotSeizeAmt">0</span></div></div>
+                </div>
+
+                <div class="section-heading">Regular vs Matured Breakdown</div>
+                <div class="stats-grid grid-3">
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Reg. Assigned</div></div><div class="msc-val">₹<span id="bRegAssAmt">0</span></div><div class="msc-sub">Accounts: <b id="bRegAssCount">0</b></div></div>
+                    <div class="modern-stat-card" style="border-color:#bbf7d0;"><div class="msc-header"><div class="msc-title" style="color:#166534;">Reg. Collected</div></div><div class="msc-val" style="color:var(--success);">₹<span id="bRegColAmt">0</span></div><div class="msc-sub success-tag"><span id="bRegColPerc">0%</span> Eff.</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Reg. Seized</div></div><div class="msc-val" style="color:#ea580c;">₹<span id="bRegSeizeAmt">0</span></div><div class="msc-sub danger-tag">Vehicles: <b id="bRegSeizeCount">0</b></div></div>
+
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title" style="color:#be185d;">Mat. Assigned</div></div><div class="msc-val" style="color:#be185d;">₹<span id="bMatAssAmt">0</span></div><div class="msc-sub">Accounts: <b id="bMatAssCount">0</b></div></div>
+                    <div class="modern-stat-card" style="border-color:#fbcfe8;"><div class="msc-header"><div class="msc-title" style="color:#9d174d;">Mat. Collected</div></div><div class="msc-val" style="color:var(--success);">₹<span id="bMatColAmt">0</span></div><div class="msc-sub success-tag"><span id="bMatColPerc">0%</span> Eff.</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title" style="color:#be185d;">Mat. Seized</div></div><div class="msc-val" style="color:#be185d;">₹<span id="bMatSeizeAmt">0</span></div><div class="msc-sub danger-tag">Vehicles: <b id="bMatSeizeCount">0</b></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title no-border" style="display:flex; justify-content:space-between;">
+                        <div><i class="fas fa-trophy" style="color: var(--accent-color);"></i> Agent Leaderboard</div>
+                        <!-- NEW EXCEL BUTTON HERE -->
+                        <button class="btn-excel" onclick="downloadBranchExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+                    </div>
+                    <div class="table-container" style="margin-top:10px;">
+                        <div class="table-header"><div>Rank</div><div>Agent Name</div><div>Assigned(₹)</div><div>Collect(₹)</div><div>Seize(₹)</div><div>Eff %</div></div>
+                        <div id="branchTableBody"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: AGENT DETAILED REPORT -->
+            <div id="agentDetailedView">
+                <button onclick="closeAgentView()" style="background:#f1f5f9; color:var(--brand-color); padding:8px 15px; border-radius:8px; border:1px solid #e2e8f0; font-weight:800; cursor:pointer; margin-bottom:15px; display:inline-flex; align-items:center; gap:5px; font-size:12px;"><i class="fas fa-arrow-left"></i> Back to Branch</button>
+                
+                <div class="dashboard-header">
+                    <div class="dashboard-info">
+                        <h2><i class="fas fa-user-tie"></i> <span id="rName">AGENT NAME</span></h2>
+                        <p style="font-size:11px;">ID: <span id="rId">--</span> &nbsp;|&nbsp; Month: <span id="rMonth">--</span></p>
+                    </div>
+                </div>
+
+                <div class="section-heading">Assigned Targets</div>
+                <div class="stats-grid grid-2">
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Reg. Assigned</div><div class="msc-icon primary"><i class="fas fa-file-invoice"></i></div></div><div class="msc-val">₹<span id="aRegAssAmt">0</span></div><div class="msc-sub primary-tag">Accounts: <b id="aRegAssC">0</b></div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title" style="color:#be185d;">Mat. Assigned</div><div class="msc-icon danger"><i class="fas fa-file-invoice"></i></div></div><div class="msc-val" style="color: #be185d;">₹<span id="aMatAssAmt">0</span></div><div class="msc-sub danger-tag" style="background:#fce7f3; color:#9d174d;">Accounts: <b id="aMatAssC">0</b></div></div>
+                </div>
+
+                <div class="section-heading"><i class="fas fa-wallet" style="color:var(--success);"></i> Collections Breakdown</div>
+                <div class="stats-grid grid-2">
+                    <div class="modern-stat-card" style="border-color: #86efac;"><div class="msc-header"><div class="msc-title" style="color:#166534;">Regular Collected</div><div class="msc-icon success"><i class="fas fa-coins"></i></div></div><div class="msc-val" style="color:var(--success);">₹<span id="aRegColAmt">0</span></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;"><div class="msc-sub success-tag">Accounts: <b id="aRegColC">0</b></div><div class="msc-sub" style="background:#bbf7d0; color:#14532d; font-weight:900;"><span id="aRegPerc">0%</span></div></div></div>
+                    <div class="modern-stat-card" style="border-color: #fbcfe8;"><div class="msc-header"><div class="msc-title" style="color:#9d174d;">Matured Collected</div><div class="msc-icon success" style="background:#fce7f3; color:#be185d;"><i class="fas fa-coins"></i></div></div><div class="msc-val" style="color:#be185d;">₹<span id="aMatColAmt">0</span></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;"><div class="msc-sub success-tag" style="background:#fce7f3; color:#9d174d;">Accounts: <b id="aMatColC">0</b></div><div class="msc-sub" style="background:#fbcfe8; color:#831843; font-weight:900;"><span id="aMatPerc">0%</span></div></div></div>
+                </div>
+
+                <div class="section-heading"><i class="fas fa-mobile-alt" style="color:var(--brand-color);"></i> Payment Modes (Collections)</div>
+                <div class="stats-grid grid-4">
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">OP</div><div class="msc-icon primary"><i class="fas fa-handshake"></i></div></div><div class="msc-val"><span id="aOpAcc">0</span></div><div class="msc-sub">Visits: <b id="aOpVisits">0</b></div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">QR</div><div class="msc-icon primary"><i class="fas fa-qrcode"></i></div></div><div class="msc-val"><span id="aQrAcc">0</span></div><div class="msc-sub">Visits: <b id="aQrVisits">0</b></div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">PCR</div><div class="msc-icon primary"><i class="fas fa-receipt"></i></div></div><div class="msc-val"><span id="aPcrAcc">0</span></div><div class="msc-sub primary-tag">Accounts</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Lock Amt</div><div class="msc-icon primary"><i class="fas fa-lock"></i></div></div><div class="msc-val"><span id="aLockAcc">0</span></div><div class="msc-sub primary-tag">Accounts</div></div>
+                </div>
+
+                <div class="section-heading">Seized Vehicles</div>
+                <div class="stats-grid grid-2">
+                    <div class="modern-stat-card" style="border-color:#fed7aa;"><div class="msc-header"><div class="msc-title" style="color:#9a3412;">Regular Seized</div><div class="msc-icon warning"><i class="fas fa-truck-pickup"></i></div></div><div class="msc-val" style="color:#ea580c;">₹<span id="aRegSeizeAmt">0</span></div><div class="msc-sub danger-tag">Vehicles: <b id="aRegSeizeC">0</b></div></div>
+                    <div class="modern-stat-card" style="border-color:#fed7aa;"><div class="msc-header"><div class="msc-title" style="color:#9a3412;">Matured Seized</div><div class="msc-icon warning" style="background:#ffedd5;"><i class="fas fa-truck-pickup"></i></div></div><div class="msc-val" style="color:#9a3412;">₹<span id="aMatSeizeAmt">0</span></div><div class="msc-sub danger-tag">Vehicles: <b id="aMatSeizeC">0</b></div></div>
+                </div>
+
+                <div class="section-heading"><i class="fas fa-route" style="color:#475569;"></i> Field Work & Attendance</div>
+                <div class="stats-grid grid-3">
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">GPS Dist.</div><div class="msc-icon primary" style="background:#f1f5f9; color:#475569;"><i class="fas fa-map-marked-alt"></i></div></div><div class="msc-val"><span id="aKm">0.00</span></div><div class="msc-sub">Kilometers</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Present</div><div class="msc-icon success"><i class="fas fa-calendar-check"></i></div></div><div class="msc-val" style="color:var(--success);"><span id="aPresent">0</span></div><div class="msc-sub success-tag">Days Logged</div></div>
+                    <div class="modern-stat-card"><div class="msc-header"><div class="msc-title">Absent</div><div class="msc-icon danger"><i class="fas fa-calendar-times"></i></div></div><div class="msc-val" style="color:#be185d;"><span id="aAbsent">0</span></div><div class="msc-sub danger-tag">No Login</div></div>
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <div class="card-header-flex">
+                        <div class="card-title no-border"><i class="fas fa-list"></i> Accounts Master List</div>
+                        <div style="display:flex; gap:10px;">
+                            <select id="accTypeFilter" class="filter-select" onchange="renderAgentTable()">
+                                <option value="ALL">Show All</option>
+                                <option value="REGULAR">Only Regular</option>
+                                <option value="MATURED">Only Matured</option>
+                            </select>
+                            <button class="btn-excel" onclick="downloadAgentExcel()"><i class="fas fa-download"></i> CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <div class="agent-table-header"><div>#</div><div>HP Number</div><div>Type</div><div>INS</div><div>Status (Mode)</div><div>Amount (₹)</div></div>
+                        <div id="agentTableBody"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & Core Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvjFcKKiu4OMmQckYXMTejdBJh9tC6TjM",
+            authDomain: "sri-vishnu-priya-finance-c591f.firebaseapp.com",
+            databaseURL: "https://sri-vishnu-priya-finance-c591f-default-rtdb.firebaseio.com",
+            projectId: "sri-vishnu-priya-finance-c591f",
+            storageBucket: "sri-vishnu-priya-finance-c591f.firebasestorage.app"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.allEmployeesData = {}; 
+        window.branchAgentsMap = {}; 
+        window.targetMonth = "";
+        window.agentMasterAccounts = []; 
+
+        function setTxt(id, val) { const el = document.getElementById(id); if (el) el.innerText = val; }
+
+        const todayObj = new Date();
+        const rYear = todayObj.getFullYear();
+        const rMonth = String(todayObj.getMonth() + 1).padStart(2, '0');
+        document.getElementById('monthFilter').value = `${rYear}-${rMonth}`;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let tcId = user.email.split('@')[0];
+                try {
+                    let snap = await get(child(ref(db), `telewingsUsers/${tcId.toUpperCase()}`));
+                    if (!snap.exists()) snap = await get(child(ref(db), `telewingsUsers/${tcId.toLowerCase()}`));
+                    if (snap.exists()) { setTxt('displayUserName', snap.val().name || tcId.toUpperCase()); }
+                } catch(e) {}
+                await fetchEmployeesList();
+            } else { window.location.href = "index.html"; }
+        });
+
+        async function fetchEmployeesList() {
+            try {
+                const branchSnap = await get(ref(db, 'branches'));
+                if (branchSnap.exists()) {
+                    const branchSelect = document.getElementById('branchSelect');
+                    branchSelect.innerHTML = '<option value="">-- Choose Branch --</option>';
+                    branchSnap.forEach(child => {
+                        const opt = document.createElement('option');
+                        opt.value = child.val().name;
+                        opt.innerText = child.val().name;
+                        branchSelect.appendChild(opt);
+                    });
+                }
+                const empSnap = await get(child(ref(db), `employees`));
+                if (empSnap.exists()) {
+                    window.allEmployeesData = empSnap.val();
+                }
+            } catch (error) {}
+        }
+
+        window.hideReport = function() {
+            document.getElementById('branchDashboardView').style.display = 'none';
+            document.getElementById('agentDetailedView').style.display = 'none';
+        }
+
+        window.generateBranchReport = async function() {
+            const selectedBranch = document.getElementById('branchSelect').value.trim();
+            const monthVal = document.getElementById('monthFilter').value; 
+            window.targetMonth = monthVal;
+
+            if(!selectedBranch || !monthVal) { alert("Please select Month and Branch."); return; }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            setTxt('repBranchName', selectedBranch.toUpperCase());
+            
+            const monthsNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let mIdx = parseInt(monthVal.split('-')[1]) - 1;
+            setTxt('repMonthStr', `${monthsNames[mIdx]} ${monthVal.split('-')[0]}`);
+
+            let bRegAssCount = 0, bRegAssAmt = 0, bMatAssCount = 0, bMatAssAmt = 0;
+            let bRegColAmt = 0, bMatColAmt = 0;
+            let bRegSeizeCount = 0, bRegSeizeAmt = 0, bMatSeizeCount = 0, bMatSeizeAmt = 0;
+
+            window.branchAgentsMap = {}; 
+
+            for(const eid in window.allEmployeesData) {
+                const emp = window.allEmployeesData[eid];
+                if(emp && emp.branch && emp.branch.toString().trim().toUpperCase() === selectedBranch.toUpperCase()) {
+                    window.branchAgentsMap[eid.toLowerCase()] = {
+                        originalId: eid, name: emp.name || eid, targetAmt: 0, colAmt: 0, seizedAmt: 0,
+                        rawAssignments: {}, rawVisits: [], attendance: {}
+                    };
+                }
+            }
+
+            const agentKeys = Object.keys(window.branchAgentsMap);
+            setTxt('bTotAgents', agentKeys.length);
+
+            if(agentKeys.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; alert("No agents in branch."); return; }
+
+            try {
+                for(const eidLC of agentKeys) {
+                    const oId = window.branchAgentsMap[eidLC].originalId;
+                    try {
+                        let aSnap = await get(child(ref(db), `assignments/${oId}/${monthVal}/details`));
+                        if(!aSnap.exists()) aSnap = await get(child(ref(db), `assignments/${oId}/${monthVal}`));
+                        if(aSnap.exists()) {
+                            const rawData = aSnap.val();
+                            const data = rawData.details ? rawData.details : rawData;
+                            window.branchAgentsMap[eidLC].rawAssignments = data; 
+                            for(const hp in data) {
+                                if(data[hp] && typeof data[hp] === 'object') {
+                                    let amt = parseFloat(data[hp].amt) || 0;
+                                    let typeStr = String(data[hp].type || '').toUpperCase();
+                                    window.branchAgentsMap[eidLC].targetAmt += amt;
+                                    if(typeStr.includes('MATURE')) { bMatAssCount++; bMatAssAmt += amt; } 
+                                    else { bRegAssCount++; bRegAssAmt += amt; }
+                                }
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                try {
+                    const vSnap = await get(child(ref(db), `visits/${monthVal}`));
+                    if (vSnap.exists()) {
+                        const allVisits = vSnap.val();
+                        for(const vId in allVisits) {
+                            const v = allVisits[vId];
+                            if(v && v.eid && window.branchAgentsMap[String(v.eid).trim().toLowerCase()]) {
+                                const vEid = String(v.eid).trim().toLowerCase();
+                                window.branchAgentsMap[vEid].rawVisits.push(v); 
+                                
+                                const hp = v.hp || 'UNKNOWN';
+                                let amt = parseFloat(v.amt) || 0;
+                                let typeStr = window.branchAgentsMap[vEid].rawAssignments[hp] ? String(window.branchAgentsMap[vEid].rawAssignments[hp].type || '').toUpperCase() : String(v.type || '').toUpperCase();
+                                let isMat = typeStr.includes('MATURE');
+
+                                if(v.stat === 'PAID') {
+                                    window.branchAgentsMap[vEid].colAmt += amt;
+                                    if(isMat) bMatColAmt += amt; else bRegColAmt += amt;
+                                } else if(v.stat === 'SEIZING' || v.stat === 'SEEZING') {
+                                    window.branchAgentsMap[vEid].seizedAmt += amt;
+                                    if(isMat) bMatSeizeAmt += amt; else bRegSeizeAmt += amt;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {}
+
+                for(const eidLC of agentKeys) {
+                    const oId = window.branchAgentsMap[eidLC].originalId;
+                    try {
+                        let attSnap = await get(child(ref(db), `attendance/${oId}/${monthVal}`));
+                        if(!attSnap.exists()) attSnap = await get(child(ref(db), `attendance/${eidLC}/${monthVal}`));
+                        if(attSnap.exists()) window.branchAgentsMap[eidLC].attendance = attSnap.val();
+                    } catch(e) {}
+                }
+
+                let totTarget = bRegAssAmt + bMatAssAmt;
+                let totCollect = bRegColAmt + bMatColAmt;
+                let branchEff = totTarget > 0 ? Math.round((totCollect / totTarget) * 100) : 0;
+                let brRegPerc = bRegAssAmt > 0 ? Math.round((bRegColAmt / bRegAssAmt) * 100) : 0;
+                let brMatPerc = bMatAssAmt > 0 ? Math.round((bMatColAmt / bMatAssAmt) * 100) : 0;
+                
+                setTxt('brCollectionEff', `${branchEff}%`);
+                setTxt('bTotAssAmt', totTarget.toLocaleString('en-IN'));
+                setTxt('bTotColAmt', totCollect.toLocaleString('en-IN'));
+                setTxt('bTotSeizeAmt', (bRegSeizeAmt + bMatSeizeAmt).toLocaleString('en-IN'));
+
+                setTxt('bRegAssAmt', bRegAssAmt.toLocaleString('en-IN')); setTxt('bRegAssCount', bRegAssCount);
+                setTxt('bRegColAmt', bRegColAmt.toLocaleString('en-IN')); setTxt('bRegColPerc', brRegPerc + '%');
+                setTxt('bRegSeizeAmt', bRegSeizeAmt.toLocaleString('en-IN')); 
+
+                setTxt('bMatAssAmt', bMatAssAmt.toLocaleString('en-IN')); setTxt('bMatAssCount', bMatAssCount);
+                setTxt('bMatColAmt', bMatColAmt.toLocaleString('en-IN')); setTxt('bMatColPerc', brMatPerc + '%');
+                setTxt('bMatSeizeAmt', bMatSeizeAmt.toLocaleString('en-IN')); 
+
+                let agentsArr = Object.values(window.branchAgentsMap);
+                agentsArr.forEach(a => { a.eff = a.targetAmt > 0 ? Math.round((a.colAmt / a.targetAmt)*100) : 0; if(a.eff>100)a.eff=100; });
+                agentsArr.sort((a,b) => b.eff - a.eff);
+
+                const tbody = document.getElementById('branchTableBody');
+                tbody.innerHTML = "";
+                
+                agentsArr.forEach((ag, idx) => {
+                    let rClass = idx === 0 ? 'rank-badge rank-1' : 'rank-badge';
+                    let effColor = ag.eff >= 75 ? "var(--success)" : (ag.eff >= 40 ? "var(--warning)" : "var(--danger)");
+                    
+                    let row = `<div class="data-row">
+                        <div class="${rClass}">${idx+1}</div>
+                        <div><div class="agent-name" onclick="openAgentDetailedReport('${ag.originalId.toLowerCase()}')">${ag.name.toUpperCase()}</div><div class="agent-id">ID: ${ag.originalId}</div></div>
+                        <div style="font-weight:700;">₹${ag.targetAmt.toLocaleString('en-IN')}</div>
+                        <div style="font-weight:800; color:var(--success);">₹${ag.colAmt.toLocaleString('en-IN')}</div>
+                        <div style="font-weight:800; color:var(--warning);">₹${ag.seizedAmt.toLocaleString('en-IN')}</div>
+                        <div style="font-weight:800; color:${effColor};">${ag.eff}%</div>
+                    </div>`;
+                    tbody.innerHTML += row;
+                });
+
+                document.getElementById('agentDetailedView').style.display = 'none';
+                document.getElementById('branchDashboardView').style.display = 'block';
+
+            } catch(e) { }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        window.openAgentDetailedReport = function(eid) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            setTimeout(() => {
+                const ag = window.branchAgentsMap[eid];
+                if(!ag) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
+
+                setTxt('rName', ag.name.toUpperCase());
+                setTxt('rId', ag.originalId.toUpperCase());
+                setTxt('rMonth', window.targetMonth);
+
+                let aRegAssC = 0, aRegAssAmt = 0, aMatAssC = 0, aMatAssAmt = 0;
+                let aRegColC = 0, aRegColAmt = 0, aMatColC = 0, aMatColAmt = 0;
+                let sRegC = 0, sRegAmt = 0, sMatC = 0, sMatAmt = 0;
+                
+                for(let hp in ag.rawAssignments) {
+                    if(ag.rawAssignments[hp] && typeof ag.rawAssignments[hp] === 'object') {
+                        let tAmt = parseFloat(ag.rawAssignments[hp].amt) || 0;
+                        let type = String(ag.rawAssignments[hp].type || '').toUpperCase().includes('MATURE') ? 'MATURED' : 'REGULAR';
+                        if(type === 'MATURED') { aMatAssC++; aMatAssAmt += tAmt; } else { aRegAssC++; aRegAssAmt += tAmt; }
+                    }
+                }
+
+                let opAcc = 0, qrAcc = 0, pcrAcc = 0, lockAcc = 0;
+                let opVisits = 0, qrVisits = 0;
+                let visitsMap = {};
+
+                ag.rawVisits.forEach(v => {
+                    let pMode = String(v.mode || v.payMode || v.payment_mode || v.pay_mode || v.type || v.remarks || '').toUpperCase();
+                    let vStat = String(v.stat).toUpperCase();
+
+                    if(vStat === 'PAID' || vStat.includes('LOCK')) {
+                        if(pMode.includes('OP') || vStat.includes('OP')) opVisits++;
+                        if(pMode.includes('QR') || vStat.includes('QR')) qrVisits++;
+                    }
+
+                    const hp = v.hp || 'UNKNOWN';
+                    if(!visitsMap[hp]) { visitsMap[hp] = { collectedAmt: 0, seizedAmt: 0, latestStatus: v.stat, payMode: '' }; }
+
+                    if(vStat === 'PAID') {
+                        visitsMap[hp].collectedAmt += (parseFloat(v.amt) || 0);
+                        visitsMap[hp].payMode = pMode;
+                    }
+                    else if(vStat === 'SEIZING' || vStat === 'SEEZING') {
+                        visitsMap[hp].seizedAmt += (parseFloat(v.amt) || 0);
+                    }
+                    visitsMap[hp].latestStatus = v.stat;
+                });
+
+                let daysP = 0, daysA = 0, totalKm = 0;
+                const [yStr, mStr] = window.targetMonth.split('-');
+                const daysInMonth = new Date(parseInt(yStr), parseInt(mStr), 0).getDate();
+
+                for(let d=1; d<=daysInMonth; d++) {
+                    const dateStr = `${yStr}-${mStr}-${String(d).padStart(2,'0')}`;
+                    const dayLog = ag.attendance[dateStr];
+
+                    if(dayLog && dayLog.onlineTime) {
+                        daysP++;
+                        let dailyKm = parseFloat(dayLog.totalKm || dayLog.distanceKm || 0);
+                        totalKm += dailyKm;
+                    } else {
+                        if(new Date(dateStr) <= new Date()) daysA++;
+                    }
+                }
+
+                window.agentMasterAccounts = [];
+                let allHPs = new Set([...Object.keys(ag.rawAssignments), ...Object.keys(visitsMap)]);
+                
+                for(const hp of allHPs) {
+                    let aType = 'REGULAR'; let ins = "N/A";
+                    
+                    if(ag.rawAssignments[hp]) { 
+                        aType = String(ag.rawAssignments[hp].type || '').toUpperCase().includes('MATURE') ? 'MATURED' : 'REGULAR'; 
+                        ins = ag.rawAssignments[hp].ins || "N/A";
+                    } else if(visitsMap[hp] && visitsMap[hp].type) { 
+                        aType = String(visitsMap[hp].type).toUpperCase().includes('MATURE') ? 'MATURED' : 'REGULAR'; 
+                    }
+
+                    let stat = 'PENDING'; let displayAmt = 0; let finalMode = '';
+
+                    if(visitsMap[hp]) {
+                        const vData = visitsMap[hp];
+                        let chkStat = String(vData.latestStatus).toUpperCase();
+                        
+                        if(chkStat === 'PAID') { 
+                            stat = 'PAID'; displayAmt = vData.collectedAmt; finalMode = vData.payMode;
+                            if(aType === 'MATURED') { aMatColC++; aMatColAmt += displayAmt; } else { aRegColC++; aRegColAmt += displayAmt; }
+
+                            if(finalMode.includes('OP') || chkStat.includes('OP')) { opAcc++; finalMode = 'OP'; }
+                            else if(finalMode.includes('QR') || chkStat.includes('QR')) { qrAcc++; finalMode = 'QR'; }
+                            else if(finalMode.includes('PCR') || chkStat.includes('PCR')) { pcrAcc++; finalMode = 'PCR'; }
+                            else if(finalMode.includes('LOCK') || chkStat.includes('LOCK')) { lockAcc++; finalMode = 'LOCK AMT'; }
+                            else { finalMode = 'CASH'; }
+                        }
+                        else if(chkStat === 'NOT PAID') { stat = 'NOT PAID'; displayAmt = 0; }
+                        else if(chkStat === 'SEIZING' || chkStat === 'SEEZING') { 
+                            stat = 'SEIZED'; displayAmt = vData.seizedAmt; 
+                            if(aType === 'MATURED') { sMatC++; sMatAmt += displayAmt; } else { sRegC++; sRegAmt += displayAmt; }
+                        }
+                    }
+                    window.agentMasterAccounts.push({ hp: hp, type: aType, ins: ins, status: stat, amount: displayAmt, mode: finalMode });
+                }
+
+                let agRegPerc = aRegAssAmt > 0 ? Math.round((aRegColAmt / aRegAssAmt) * 100) : 0;
+                let agMatPerc = aMatAssAmt > 0 ? Math.round((aMatColAmt / aMatAssAmt) * 100) : 0;
+
+                setTxt('aRegAssAmt', aRegAssAmt.toLocaleString('en-IN')); setTxt('aRegAssC', aRegAssC);
+                setTxt('aMatAssAmt', aMatAssAmt.toLocaleString('en-IN')); setTxt('aMatAssC', aMatAssC);
+
+                setTxt('aRegColAmt', aRegColAmt.toLocaleString('en-IN')); setTxt('aRegColC', aRegColC); setTxt('aRegPerc', agRegPerc + '%');
+                setTxt('aMatColAmt', aMatColAmt.toLocaleString('en-IN')); setTxt('aMatColC', aMatColC); setTxt('aMatPerc', agMatPerc + '%');
+
+                setTxt('aOpAcc', opAcc); setTxt('aOpVisits', opVisits);
+                setTxt('aQrAcc', qrAcc); setTxt('aQrVisits', qrVisits);
+                setTxt('aPcrAcc', pcrAcc);
+                setTxt('aLockAcc', lockAcc);
+
+                setTxt('aRegSeizeAmt', sRegAmt.toLocaleString('en-IN')); setTxt('aRegSeizeC', sRegC);
+                setTxt('aMatSeizeAmt', sMatAmt.toLocaleString('en-IN')); setTxt('aMatSeizeC', sMatC);
+
+                setTxt('aKm', totalKm.toFixed(2));
+                
+                setTxt('aPresent', daysP);
+                setTxt('aAbsent', daysA);
+
+                window.renderAgentTable();
+
+                document.getElementById('searchCard').style.display = 'none';
+                document.getElementById('branchDashboardView').style.display = 'none';
+                document.getElementById('agentDetailedView').style.display = 'block';
+                setTxt('mainHeaderTitle', "Agent Detailed Report");
+
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 300); 
+        }
+
+        window.renderAgentTable = function() {
+            const filterVal = document.getElementById('accTypeFilter').value;
+            const tbody = document.getElementById('agentTableBody');
+            tbody.innerHTML = '';
+
+            let filteredAccs = window.agentMasterAccounts;
+            if(filterVal !== 'ALL') { filteredAccs = window.agentMasterAccounts.filter(a => a.type === filterVal); }
+
+            if(filteredAccs.length === 0) {
+                tbody.innerHTML = `<div style="padding:20px; text-align:center; color:#64748b; font-weight:600;">No accounts found</div>`;
+                return;
+            }
+
+            filteredAccs.forEach((acc, idx) => {
+                let badgeType = acc.type === 'MATURED' ? `<span class="badge-type matured">MATURED</span>` : `<span class="badge-type">REGULAR</span>`;
+                let statTag = `<span class="status-tag tag-pending">PENDING</span>`;
+                let amtHtml = `<span style="font-weight:700;">₹0</span>`;
+
+                if(acc.status === 'PAID') {
+                    let modeBadge = acc.mode ? ` - ${acc.mode}` : '';
+                    statTag = `<span class="status-tag tag-paid" style="font-size:10px;">PAID${modeBadge}</span>`;
+                    amtHtml = `<span style="font-weight:800; color:var(--success);">₹${acc.amount.toLocaleString('en-IN')}</span>`;
+                } else if(acc.status === 'NOT PAID') {
+                    statTag = `<span class="status-tag tag-unpaid">NOT PAID</span>`;
+                } else if(acc.status === 'SEIZED') {
+                    statTag = `<span class="status-tag tag-seizing">SEIZED</span>`;
+                    amtHtml = `<span style="font-weight:800; color:#ea580c;">₹${acc.amount.toLocaleString('en-IN')}</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <div class="agent-data-row">
+                        <div style="font-weight:800; color:var(--brand-color);">${idx+1}</div>
+                        <div style="font-weight:700; font-size:12px;">${acc.hp}</div>
+                        <div>${badgeType}</div>
+                        <div style="font-weight:800; color:#475569;">${acc.ins}</div>
+                        <div>${statTag}</div>
+                        <div>${amtHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        window.closeAgentView = function() {
+            document.getElementById('agentDetailedView').style.display = 'none';
+            document.getElementById('branchDashboardView').style.display = 'block';
+            document.getElementById('searchCard').style.display = 'block';
+            setTxt('mainHeaderTitle', "Mega Branch Report");
+        }
+
+        // ==========================================
+        // EXCEL DOWNLOAD FUNCTIONS 
+        // ==========================================
+
+        window.downloadBranchExcel = function() {
+            if(Object.keys(window.branchAgentsMap).length === 0) return alert("No data available to download.");
+            
+            let csvContent = "Rank,Agent Name,Agent ID,Assigned Target,Collected Amount,Seized Amount,Efficiency (%)\n";
+            
+            let agentsArr = Object.values(window.branchAgentsMap);
+            agentsArr.sort((a,b) => b.eff - a.eff);
+            
+            agentsArr.forEach((ag, idx) => {
+                csvContent += `${idx+1},"${ag.name.toUpperCase()}","${ag.originalId}",${ag.targetAmt},${ag.colAmt},${ag.seizedAmt},${ag.eff}%\n`;
+            });
+
+            downloadCSV(csvContent, `Branch_Report_${document.getElementById('repBranchName').innerText}_${window.targetMonth}.csv`);
+        }
+
+        window.downloadAgentExcel = function() {
+            if(window.agentMasterAccounts.length === 0) return alert("No accounts to download.");
+            
+            let csvContent = "S.No,HP Number,Account Type,INS,Status,Mode,Amount Collected/Seized\n";
+            
+            window.agentMasterAccounts.forEach((acc, idx) => {
+                csvContent += `${idx+1},${acc.hp},${acc.type},${acc.ins},${acc.status},${acc.mode || 'N/A'},${acc.amount}\n`;
+            });
+
+            downloadCSV(csvContent, `Agent_${document.getElementById('rId').innerText}_Report_${window.targetMonth}.csv`);
+        }
+
+        function downloadCSV(csvContent, fileName) {
+            let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement("a");
+            if (link.download !== undefined) { 
+                let url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    </script>
+</body>
+</html>

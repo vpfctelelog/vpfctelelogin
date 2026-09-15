@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPFC Admin - Visit Status</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ADMIN BASE STYLES */
+        :root {
+            --sidebar-bg: #1e293b; --sidebar-hover: #334155;
+            --main-bg: #F4F7FE; --card-bg: #FFFFFF;
+            --text-main: #2B3674; --text-muted: #A3AED0;
+            --border-color: #E2E8F0; --input-bg: #f8fafc;
+            --brand-color: #5B4EFA; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --accent-color: #E2A03F; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--main-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 100; overflow-y: auto; flex-shrink: 0; }
+        .sidebar::-webkit-scrollbar { display: none; }
+        .brand { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .brand h2 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; color: #38bdf8;}
+        .brand p { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        .menu-list { padding: 15px 10px; flex: 1; }
+        .menu-item { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 500; transition: 0.3s; }
+        .menu-item i { width: 24px; font-size: 16px; margin-right: 10px; text-align: center; }
+        .menu-item:hover { background-color: var(--sidebar-hover); color: white; }
+        .menu-item.active { background-color: var(--brand-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { background: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02); z-index: 10; position: sticky; top: 0; }
+        .header-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--main-bg); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-main); }
+        
+        .page-container { padding: 30px; max-width: 1000px; margin: 0 auto; width: 100%; }
+
+        /* SEARCH CARD */
+        .search-card { background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid var(--border-color); margin-bottom: 25px; }
+        .search-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .input-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 10px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 12px 15px; border: 1.5px solid var(--border-color); border-radius: 10px; font-size: 14px; background-color: var(--input-bg); color: var(--text-main); font-weight: 600; outline: none; }
+        
+        .btn-action { background: var(--brand-color); color: white; padding: 12px 25px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+
+        /* --- EMPLOYEE APP STYLES --- */
+        .summary-container { display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .summary-card { background: var(--card-bg); padding: 20px 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid var(--border-color); text-align: center; }
+        .summary-value { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .summary-value.success { color: #166534; }
+        .summary-value.warning { color: #92400e; font-size: 20px; }
+        .summary-label { font-size: 12px; font-weight: 700; color: #4b5563; text-transform: uppercase; }
+
+        .filters-container { display: none; gap: 10px; margin-bottom: 25px; align-items: center; flex-wrap: wrap; }
+        .filter-input { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 14px; font-weight: 600; background-color: var(--input-bg); outline: none; }
+        .search-full { flex: 1; min-width: 200px; }
+
+        .visits-list { display: none; flex-direction: column; gap: 20px; }
+        .visit-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid var(--border-color); border-left: 6px solid #94a3b8; overflow: hidden; }
+        .visit-card.paid { border-left-color: #22c55e; }
+        .visit-card.not-paid { border-left-color: #ef4444; }
+        .visit-card.seizing { border-left-color: #f59e0b; }
+        
+        .card-header { padding: 15px; border-bottom: 1px dashed var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+        .card-hp { font-weight: 800; color: var(--text-main); font-size: 16px; display: flex; align-items: center; }
+        .card-time { font-size: 12px; font-weight: 600; color: #64748b; }
+        
+        .card-body { padding: 20px; }
+        .card-cust { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+        .card-details { font-size: 14px; color: #4b5563; line-height: 1.6; }
+        
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; }
+        .badge-paid { background: #dcfce7; color: #166534; }
+        .badge-not-paid { background: #fee2e2; color: #991b1b; }
+        .badge-seizing { background: #fef3c7; color: #92400e; }
+        
+        .badge-direct { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-left: 10px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+        .count-badge { border-radius: 12px; padding: 3px 10px; font-size: 11px; margin-left: 10px; font-weight: 800; }
+        .count-single { background: #e2e8f0; color: #475569; }
+        .count-multi { background: var(--accent-color); color: white; }
+
+        .amt-highlight { font-size: 20px; font-weight: 800; color: #166534; }
+        .reason-highlight { color: #b91c1c; font-weight: 600; }
+
+        .visit-history-box { margin-top:15px; padding-top:15px; border-top:1px dashed var(--border-color); font-size:12px; }
+        .history-tag { display: inline-flex; align-items: center; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 8px; color: var(--text-main); font-weight: 700; margin: 5px 5px 0 0; cursor: pointer; transition: 0.2s; }
+        .history-tag:hover { background: #e2e8f0; }
+        .history-tag.h-paid { border-color: #86efac; background: #f0fdf4; color: #166534; }
+        .history-tag.h-notpaid { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+        .history-icon { margin-left: 6px; font-size: 11px; opacity: 0.7; }
+
+        .card-actions { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .btn-card-action { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: white; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; }
+        .btn-card-action:hover { background: var(--main-bg); }
+
+        #loadingText { text-align: center; padding: 20px; font-size: 15px; color: var(--sidebar-bg); font-weight: 600; display: none; }
+        #noDataText { text-align: center; padding: 40px 20px; font-size: 15px; color: #64748b; background: white; border-radius: 12px; border: 1px solid var(--border-color); display: none; font-weight: 600; }
+
+        /* IMAGE MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; text-align: center; }
+        .modal-close { background: var(--danger); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 700; width: 100%; margin-top: 20px; cursor: pointer; font-size: 15px; }
+        .proof-img { width: 100%; height: auto; border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border-color); }
+        .proof-title { font-size: 13px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; text-transform: uppercase; text-align: left; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 10px; }
+        
+        .modal-loc-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #f0f9ff; color: #0369a1; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: 700; border: 1px solid #bae6fd; margin-bottom: 15px; font-size: 14px; }
+        .modal-loc-btn:hover { background: #e0f2fe; }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="brand">
+            <h2>VPFC ADMIN</h2>
+            <p>Control Panel</p>
+        </div>
+        <div class="menu-list">
+            <a href="admin-dashboard.html" class="menu-item"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="admin-assign-accounts.html" class="menu-item"><i class="fas fa-tasks"></i> <span>Manage Assignments</span></a>
+            <a href="admin-complaint-box.html" class="menu-item"><i class="fas fa-exclamation-circle"></i> <span>Global Complaints</span></a>
+            <a href="admin-tc-visit-status.html" class="menu-item active"><i class="fas fa-clipboard-check"></i> <span>All Visit Status</span></a>
+            <a href="admin-emp-performance.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Emp. Performance</span></a>
+            <a href="admin-branch-report.html" class="menu-item"><i class="fas fa-building"></i> <span>Branch Report</span></a>
+            <a href="admin-overall-performance.html" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Overall Performance</span></a>
+            <a href="admin-attendance-log.html" class="menu-item"><i class="fas fa-user-clock"></i> <span>Attendance Log</span></a>
+            <a href="admin-employee-register.html" class="menu-item"><i class="fas fa-users"></i> <span>Employee Register</span></a>
+            <a href="admin-employee-biodata.html" class="menu-item"><i class="fas fa-address-card"></i> <span>Employee Bio Data</span></a>
+            <a href="admin-live-location.html" class="menu-item"><i class="fas fa-map-marker-alt"></i> <span>Live Radar</span></a>
+            <a href="admin-camp-history.html" class="menu-item"><i class="fas fa-campground"></i> <span>Camp History</span></a>
+            <a href="admin-settings.html" class="menu-item"><i class="fas fa-cog"></i> <span>System Settings</span></a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title">Field Agent Visits (Admin)</div>
+            <div class="header-right">
+                <div class="user-profile">
+                    <i class="fas fa-user-shield"></i> <span id="displayUserName">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-container">
+            
+            <!-- SEARCH CONTROLS -->
+            <div class="search-card">
+                <div class="search-title"><i class="fas fa-search"></i> Find Agent Data</div>
+                <div class="input-row" style="align-items: flex-end;">
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="branchSelect" onchange="loadEmployeesForBranch()">
+                            <option value="">-- Choose Branch --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Employee</label>
+                        <select id="employeeSelect" onchange="hideResults()">
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <button class="btn-action" onclick="fetchEmployeeVisits()">
+                            <i class="fas fa-sync-alt"></i> Fetch Records
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTERS -->
+            <div class="filters-container" id="filtersContainer">
+                <select id="viewType" class="filter-input" style="width: 220px;" onchange="toggleView()">
+                    <option value="monthly" selected>Monthly View (All Data)</option>
+                    <option value="daily">Daily View (Specific Date)</option>
+                </select>
+                
+                <input type="date" id="filterDate" class="filter-input" style="display:none; width: 180px;" onchange="fetchEmployeeVisits()">
+                <input type="month" id="filterMonth" class="filter-input" style="display:block; width: 180px;" onchange="fetchEmployeeVisits()">
+                
+                <input type="text" id="searchHp" class="filter-input search-full" placeholder="Search HP Number..." onkeyup="filterCards()">
+            </div>
+
+            <!-- SUMMARY SECTION -->
+            <div class="summary-container" id="summaryContainer">
+                <div class="summary-card">
+                    <div class="summary-value success" id="sumAmount">₹0</div>
+                    <div class="summary-label">Collected</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="sumHouseVisits">0</div>
+                    <div class="summary-label">House Visits</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="sumDirect" style="color: #0284c7;">0</div>
+                    <div class="summary-label">Direct / No Visit</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value warning" id="sumPending">0 / 0</div>
+                    <div class="summary-label">Pending / Assigned</div>
+                </div>
+            </div>
+
+            <div id="loadingText"><i class="fas fa-spinner fa-spin"></i> Fetching records from database...</div>
+            <div id="noDataText"><i class="fas fa-info-circle"></i> No visits found for this agent in the selected time period.</div>
+
+            <!-- VISITS CARDS LIST -->
+            <div class="visits-list" id="visitsContainer">
+                <!-- Cards injected here -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PROOFS MODAL -->
+    <div class="modal-overlay" id="proofModal">
+        <div class="modal-content">
+            <div id="modalHeaderTitle" style="font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">Visit Details</div>
+            <div id="modalImagesContainer"></div>
+            <button class="modal-close" onclick="closeModal()">Close Details</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvjFcKKiu4OMmQckYXMTejdBJh9tC6TjM",
+            authDomain: "sri-vishnu-priya-finance-c591f.firebaseapp.com",
+            databaseURL: "https://sri-vishnu-priya-finance-c591f-default-rtdb.firebaseio.com",
+            projectId: "sri-vishnu-priya-finance-c591f",
+            storageBucket: "sri-vishnu-priya-finance-c591f.firebasestorage.app"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.allEmployeesData = {}; 
+        window.visitHistoryData = {}; 
+        window.targetEmpId = null;
+
+        // Default Dates
+        const today = new Date();
+        const localDateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        const localMonthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+        
+        document.getElementById('filterDate').value = localDateStr;
+        document.getElementById('filterMonth').value = localMonthStr;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let tcId = user.email.split('@')[0];
+                try {
+                    let snap = await get(child(ref(db), `telewingsUsers/${tcId.toUpperCase()}`));
+                    if (!snap.exists()) snap = await get(child(ref(db), `telewingsUsers/${tcId.toLowerCase()}`));
+                    
+                    if (snap.exists()) {
+                        const userData = snap.val();
+                        if (userData.role === 'Admin' || userData.role === 'head') {
+                            window.tcName = userData.name || tcId.toUpperCase();
+                            document.getElementById('displayUserName').innerText = `${window.tcName} (ADMIN)`;
+                            await fetchEmployeesList();
+                        } else { 
+                            await signOut(auth);
+                            alert("Access Denied: Admin privileges required.");
+                            window.location.href = "index.html"; 
+                        }
+                    } else { window.location.href = "index.html"; }
+                } catch(e) { window.location.href = "index.html"; }
+            } else { window.location.href = "index.html"; }
+        });
+
+        async function fetchEmployeesList() {
+            try {
+                // 1. Fetch Branches directly from 'branches' node
+                const branchSnap = await get(ref(db, 'branches'));
+                if (branchSnap.exists()) {
+                    const branchSelect = document.getElementById('branchSelect');
+                    branchSelect.innerHTML = '<option value="">-- Choose Branch --</option>';
+                    branchSnap.forEach(child => {
+                        const opt = document.createElement('option');
+                        opt.value = child.val().name;
+                        opt.innerText = child.val().name;
+                        branchSelect.appendChild(opt);
+                    });
+                }
+
+                // 2. Fetch Employees Data
+                const empSnap = await get(child(ref(db), `employees`));
+                if (empSnap.exists()) {
+                    window.allEmployeesData = empSnap.val();
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        window.loadEmployeesForBranch = function() {
+            hideResults();
+            const selectedBranch = document.getElementById('branchSelect').value;
+            const empSelect = document.getElementById('employeeSelect');
+            empSelect.innerHTML = '<option value="">-- Select Employee --</option>'; 
+
+            if(!selectedBranch) return;
+
+            for(const empId in window.allEmployeesData) {
+                const emp = window.allEmployeesData[empId];
+                if(emp.branch === selectedBranch) {
+                    const opt = document.createElement('option');
+                    opt.value = empId;
+                    opt.innerText = `${emp.name} (${empId})`;
+                    empSelect.appendChild(opt);
+                }
+            }
+        }
+
+        window.hideResults = function() {
+            document.getElementById('filtersContainer').style.display = 'none';
+            document.getElementById('summaryContainer').style.display = 'none';
+            document.getElementById('visitsContainer').style.display = 'none';
+            document.getElementById('noDataText').style.display = 'none';
+        }
+
+        window.toggleView = function() {
+            const type = document.getElementById('viewType').value;
+            if (type === 'daily') {
+                document.getElementById('filterDate').style.display = 'block';
+                document.getElementById('filterMonth').style.display = 'none';
+            } else {
+                document.getElementById('filterDate').style.display = 'none';
+                document.getElementById('filterMonth').style.display = 'block';
+            }
+            if(window.targetEmpId) window.fetchEmployeeVisits();
+        }
+
+        window.formatDateShort = function(dStr) {
+            if(!dStr) return "N/A";
+            const d = new Date(dStr);
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            return `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}`;
+        }
+
+        // ==========================================
+        // FETCH VISITS - EXACTLY LIKE EMPLOYEE APP
+        // ==========================================
+        window.fetchEmployeeVisits = async function() {
+            const empId = document.getElementById('employeeSelect').value;
+            if(!empId) {
+                alert("Please select Branch and Employee to fetch records.");
+                return;
+            }
+            window.targetEmpId = empId;
+            
+            document.getElementById('loadingText').style.display = 'block';
+            document.getElementById('noDataText').style.display = 'none';
+            const container = document.getElementById('visitsContainer');
+            container.innerHTML = '';
+            window.visitHistoryData = {}; 
+            
+            const viewType = document.getElementById('viewType').value;
+            let yearMonthStr = "";
+            let targetDate = "";
+
+            if (viewType === 'daily') {
+                targetDate = document.getElementById('filterDate').value;
+                if(!targetDate) { document.getElementById('loadingText').style.display = 'none'; return; }
+                yearMonthStr = targetDate.substring(0, 7); 
+            } else {
+                yearMonthStr = document.getElementById('filterMonth').value;
+                if(!yearMonthStr) { document.getElementById('loadingText').style.display = 'none'; return; }
+            }
+            
+            let totalAmount = 0;
+            let totalAssigned = 0;
+            let monthlyVisitedHPs = new Set(); 
+
+            try {
+                // Fetch Total Assigned
+                try {
+                    const assignSnap = await get(child(ref(db), `assignments/${window.targetEmpId}/${yearMonthStr}/details`));
+                    if (assignSnap.exists()) {
+                        totalAssigned = Object.keys(assignSnap.val()).length;
+                    }
+                } catch(e) {}
+
+                // Fetch Monthly Visits
+                const snapshot = await get(child(ref(db), `visits/${yearMonthStr}`));
+                let matchFound = false;
+                
+                if (snapshot.exists()) {
+                    const visitsData = snapshot.val();
+                    let groupedVisits = {};
+
+                    for (const vId in visitsData) {
+                        const v = visitsData[vId];
+                        
+                        // Strict Match Employee ID (Case Insensitive)
+                        if (v && v.eid && String(v.eid).trim().toLowerCase() === String(window.targetEmpId).trim().toLowerCase()) {
+                            
+                            // Apply Daily Filter correctly
+                            if (viewType === 'daily' && v.date !== targetDate) continue;
+
+                            matchFound = true;
+                            const safeHp = v.hp || 'UNKNOWN';
+                            monthlyVisitedHPs.add(safeHp);
+
+                            if (!groupedVisits[safeHp]) {
+                                groupedVisits[safeHp] = { count: 0, totalAmt: 0, historyArr: [], hasPhysicalVisit: false };
+                            }
+                            
+                            groupedVisits[safeHp].count++;
+                            groupedVisits[safeHp].totalAmt += (parseInt(v.amt) || 0);
+
+                            if (v.photoHouse && v.photoHouse !== "N/A" && v.photoHouse.trim() !== "") {
+                                groupedVisits[safeHp].hasPhysicalVisit = true;
+                            }
+
+                            groupedVisits[safeHp].historyArr.push(v);
+
+                            // Overwrite with latest data
+                            groupedVisits[safeHp].cname = v.cname || 'N/A';
+                            groupedVisits[safeHp].stat = v.stat || 'N/A';
+                            groupedVisits[safeHp].time = v.time || 'N/A';
+                            groupedVisits[safeHp].type = v.type || 'N/A';
+                            groupedVisits[safeHp].unr = v.unr || '';
+                            groupedVisits[safeHp].next = v.next || '';
+                            groupedVisits[safeHp].seizeRsn = v.seizeRsn || '';
+                            groupedVisits[safeHp].loc = v.loc || '';
+                        }
+                    }
+
+                    if(!matchFound) {
+                        document.getElementById('noDataText').style.display = 'block';
+                        document.getElementById('filtersContainer').style.display = 'flex';
+                    } else {
+                        const hpKeys = Object.keys(groupedVisits).reverse();
+                        let houseVisitsCount = 0;
+                        let directVisitsCount = 0;
+
+                        for (const hp of hpKeys) {
+                            const v = groupedVisits[hp];
+                            totalAmount += v.totalAmt;
+                            window.visitHistoryData[hp] = v.historyArr;
+
+                            if (v.hasPhysicalVisit) houseVisitsCount++;
+                            else directVisitsCount++;
+
+                            let cardClass = '';
+                            let badgeClass = '';
+                            if(v.stat === 'PAID') { cardClass = 'paid'; badgeClass = 'badge-paid'; }
+                            else if(v.stat === 'NOT PAID') { cardClass = 'not-paid'; badgeClass = 'badge-not-paid'; }
+                            else if(v.stat === 'SEIZING') { cardClass = 'seizing'; badgeClass = 'badge-seizing'; }
+
+                            let detailsHtml = '';
+                            if(v.stat === 'PAID') {
+                                detailsHtml = `
+                                    <div class="amt-highlight">₹${v.totalAmt}</div>
+                                    <div><strong>Latest Mode:</strong> ${v.type}</div>
+                                `;
+                            } else if(v.stat === 'NOT PAID') {
+                                detailsHtml = `
+                                    <div class="reason-highlight">Reason: ${v.unr}</div>
+                                    <div><strong>Next Date:</strong> ${v.next}</div>
+                                `;
+                            } else {
+                                detailsHtml = `<div class="reason-highlight">Remarks: ${v.seizeRsn}</div>`;
+                            }
+
+                            let historyTagsHtml = '';
+                            v.historyArr.forEach((histObj, index) => {
+                                let hClass = histObj.stat === 'PAID' ? 'h-paid' : (histObj.stat === 'NOT PAID' ? 'h-notpaid' : '');
+                                let shortDate = window.formatDateShort(histObj.date);
+                                historyTagsHtml += `
+                                    <span class="history-tag ${hClass}" onclick="openHistoryModal('${hp}', ${index})" title="Click to view details">
+                                        ${shortDate} (${histObj.stat}) <i class="fas fa-external-link-alt history-icon"></i>
+                                    </span>`;
+                            });
+
+                            let historyHtml = '';
+                            if(v.historyArr.length > 0) {
+                                historyHtml = `
+                                    <div class="visit-history-box">
+                                        <div style="font-weight:700; color:#64748b; margin-bottom:8px;"><i class="fas fa-calendar-alt"></i> Visit History (Tap to view details):</div>
+                                        <div>${historyTagsHtml}</div>
+                                    </div>
+                                `;
+                            }
+
+                            let visitBadge = v.count > 1 
+                                ? `<span class="count-badge count-multi">${v.count} VISITS</span>` 
+                                : `<span class="count-badge count-single">1 VISIT</span>`;
+                                
+                            let directBadge = (!v.hasPhysicalVisit) ? `<span class="badge-direct"><i class="fas fa-bolt"></i> No Visit</span>` : '';
+                            
+                            const latestIndex = v.historyArr.length - 1;
+
+                            const cardHtml = `
+                                <div class="visit-card ${cardClass}" data-hp="${hp}">
+                                    <div class="card-header">
+                                        <div class="card-hp"><i class="fas fa-hashtag"></i> ${hp} ${visitBadge} ${directBadge}</div>
+                                        <div class="card-time"><i class="far fa-clock"></i> Latest: ${v.time}</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="status-badge ${badgeClass}">${v.stat}</div>
+                                        <div class="card-cust"><i class="fas fa-user"></i> ${v.cname}</div>
+                                        <div class="card-details">${detailsHtml}</div>
+                                        ${historyHtml}
+                                    </div>
+                                    <div class="card-actions">
+                                        <button class="btn-card-action" onclick="openHistoryModal('${hp}', ${latestIndex})">
+                                            <i class="fas fa-image"></i> View Proofs & Location
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            container.insertAdjacentHTML('beforeend', cardHtml);
+                        }
+
+                        document.getElementById('sumAmount').innerText = `₹${totalAmount}`;
+                        document.getElementById('sumHouseVisits').innerText = houseVisitsCount;
+                        document.getElementById('sumDirect').innerText = directVisitsCount;
+                        
+                        let pendingCount = totalAssigned - monthlyVisitedHPs.size;
+                        if(pendingCount < 0) pendingCount = 0;
+                        document.getElementById('sumPending').innerText = `${pendingCount} / ${totalAssigned}`;
+
+                        document.getElementById('filtersContainer').style.display = 'flex';
+                        document.getElementById('summaryContainer').style.display = 'grid';
+                        document.getElementById('visitsContainer').style.display = 'flex';
+                    }
+
+                } else {
+                    document.getElementById('noDataText').style.display = 'block';
+                    document.getElementById('filtersContainer').style.display = 'flex';
+                }
+                
+            } catch (error) {
+                console.error("Error fetching visits:", error);
+                alert("Failed to load data.");
+            } finally {
+                document.getElementById('loadingText').style.display = 'none';
+            }
+        };
+
+        window.filterCards = function() {
+            const query = document.getElementById('searchHp').value.toLowerCase();
+            const cards = document.querySelectorAll('.visit-card');
+            cards.forEach(card => {
+                const hp = card.getAttribute('data-hp').toLowerCase();
+                if (hp.includes(query)) card.style.display = 'block';
+                else card.style.display = 'none';
+            });
+        };
+
+        // MODAL
+        window.openHistoryModal = function(hp, index) {
+            const histObj = window.visitHistoryData[hp][index];
+            const container = document.getElementById('modalImagesContainer');
+            container.innerHTML = ''; 
+            
+            document.getElementById('modalHeaderTitle').innerText = `Visit Details: ${window.formatDateShort(histObj.date)} (${histObj.stat})`;
+
+            if (histObj.loc && histObj.loc !== "N/A" && histObj.loc !== "Location Denied") {
+                container.innerHTML += `
+                    <a href="https://maps.google.com/?q=${histObj.loc}" target="_blank" class="modal-loc-btn">
+                        <i class="fas fa-map-marker-alt"></i> View Exact Location on Map
+                    </a>
+                `;
+            } else {
+                container.innerHTML += `<div style="color:var(--danger); font-size:13px; margin-bottom:15px; font-weight:600;"><i class="fas fa-exclamation-circle"></i> Location not captured for this date.</div>`;
+            }
+
+            let hasImages = false;
+            if(histObj.photoCust && histObj.photoCust !== 'N/A' && histObj.photoCust.trim() !== '') {
+                container.innerHTML += `<div class="proof-title">Customer Photo</div><img src="${histObj.photoCust}" class="proof-img" alt="Customer">`;
+                hasImages = true;
+            }
+            if(histObj.photoHouse && histObj.photoHouse !== 'N/A' && histObj.photoHouse.trim() !== '') {
+                container.innerHTML += `<div class="proof-title">House Photo</div><img src="${histObj.photoHouse}" class="proof-img" alt="House">`;
+                hasImages = true;
+            }
+            if(histObj.receiptUrl && histObj.receiptUrl !== 'N/A' && histObj.receiptUrl.trim() !== '') {
+                container.innerHTML += `<div class="proof-title">Receipt / Proof</div><img src="${histObj.receiptUrl}" class="proof-img" alt="Receipt">`;
+                hasImages = true;
+            }
+            
+            if(!hasImages) {
+                container.innerHTML += `<div style="color:#64748b; font-size:14px; padding:20px; font-weight:600;">No images uploaded for this specific date.</div>`;
+            }
+
+            document.getElementById('proofModal').style.display = 'flex';
+        };
+
+        window.closeModal = function() {
+            document.getElementById('proofModal').style.display = 'none';
+        };
+    </script>
+</body>
+</html>

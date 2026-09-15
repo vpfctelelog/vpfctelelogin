@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPFC Admin - Attendance Log</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --sidebar-bg: #1e293b; --sidebar-hover: #334155;
+            --main-bg: #F4F7FE; --card-bg: #FFFFFF;
+            --text-main: #2B3674; --text-muted: #A3AED0;
+            --border-color: #E2E8F0; --input-bg: #f8fafc;
+            --brand-color: #5B4EFA; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--main-bg); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: 0.3s; z-index: 100; overflow-y: auto; flex-shrink: 0; }
+        .sidebar::-webkit-scrollbar { display: none; }
+        .brand { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .brand h2 { font-size: 20px; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; color: #38bdf8;}
+        .brand p { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        .menu-list { padding: 15px 10px; flex: 1; }
+        .menu-item { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; margin-bottom: 5px; font-size: 14px; font-weight: 500; transition: 0.3s; }
+        .menu-item i { width: 24px; font-size: 16px; margin-right: 10px; text-align: center; }
+        .menu-item:hover { background-color: var(--sidebar-hover); color: white; }
+        .menu-item.active { background-color: var(--brand-color); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { background: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02); z-index: 10; position: sticky; top: 0; }
+        .header-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--main-bg); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-main); }
+        
+        .page-container { padding: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* TABS */
+        .tabs-container { display: flex; gap: 10px; margin-bottom: 25px; }
+        .tab-btn { padding: 12px 25px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; background: var(--card-bg); color: var(--text-muted); box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: 0.3s; display: flex; align-items: center; gap: 8px;}
+        .tab-btn.active { background: var(--brand-color); color: white; box-shadow: 0 4px 15px rgba(91, 78, 250, 0.3); }
+
+        /* SUMMARY CARDS */
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 20px; color: white; }
+        .bg-total { background: #3b82f6; } .bg-online { background: #10b981; } .bg-offline { background: #64748b; } .bg-absent { background: #ef4444; }
+        .stat-info h3 { font-size: 22px; font-weight: 800; color: var(--text-main); }
+        .stat-info p { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+        /* FILTERS */
+        .filter-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; }
+        .input-group { flex: 1; }
+        .input-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; background-color: var(--input-bg); color: var(--text-main); font-weight: 600; outline: none; }
+        .btn-action { background: var(--brand-color); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; height: 42px; display: flex; justify-content: center; align-items: center; gap: 5px;}
+        
+        /* TABLE */
+        .table-container { border: 1px solid var(--border-color); border-radius: 12px; background: white; overflow: hidden; }
+        .table-header { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1.5fr 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px 20px; border-bottom: 1px solid var(--border-color); font-weight: 800; font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+        .scrollable-body { max-height: 500px; overflow-y: auto; }
+        .data-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .data-row:hover { background-color: #f8fafc; }
+
+        .emp-name { font-size: 14px; font-weight: 800; color: var(--brand-color); }
+        .emp-branch { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+        
+        .month-stats { display: inline-flex; gap: 8px; margin-top: 5px; }
+        .m-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid; }
+        .m-present { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .m-absent { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; }
+        .s-online { background: #dcfce7; color: #16a34a; border: 1px solid #86efac; animation: pulse 2s infinite; }
+        .s-offline { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .s-absent { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); } 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } }
+
+        .time-text { font-weight: 800; color: var(--text-main); }
+        .action-link { color: var(--brand-color); font-size: 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background: #e0e7ff; padding: 4px 8px; border-radius: 6px; margin-top: 4px; border: 1px solid #c7d2fe; cursor: pointer; }
+
+        /* CALENDAR STYLES */
+        .cal-container { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid var(--border-color); max-width: 800px; margin: 0 auto;}
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--input-bg); padding-bottom: 15px; }
+        .cal-title { font-size: 18px; font-weight: 800; color: var(--brand-color); }
+        .cal-stats { display: flex; gap: 15px; }
+        .c-stat-box { background: var(--input-bg); padding: 8px 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color); }
+        .c-stat-box span { display: block; font-size: 18px; font-weight: 900; }
+        .c-stat-box p { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;}
+
+        .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 10px; }
+        .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        
+        .day-cell { height: 70px; border-radius: 8px; border: 1px solid var(--border-color); padding: 5px; position: relative; background: #f8fafc; transition: 0.2s;}
+        .day-empty { background: transparent; border: none; }
+        
+        .day-num { font-size: 14px; font-weight: 800; color: var(--text-main); position: absolute; top: 5px; left: 8px;}
+        .day-indicator { position: absolute; bottom: 8px; left: 0; width: 100%; text-align: center; font-size: 11px; font-weight: 800; }
+        
+        .cal-present { background: #f0fdf4; border-color: #bbf7d0; }
+        .cal-present .day-indicator { color: #16a34a; }
+        .cal-absent { background: #fef2f2; border-color: #fecdd3; }
+        .cal-absent .day-indicator { color: #e11d48; }
+        
+        .cal-today { border: 2px solid var(--brand-color); }
+
+        /* MODAL */
+        #photoModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 15px; border-radius: 12px; text-align: center; max-width: 400px; width: 90%; }
+        .modal-content img { width: 100%; border-radius: 8px; margin-bottom: 15px; }
+        .btn-close { background: var(--danger); color: white; padding: 8px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; }
+
+        #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <i class="fas fa-circle-notch fa-spin" style="font-size: 40px; color: var(--brand-color); margin-bottom: 15px;"></i>
+        <h3 style="color:var(--text-main); font-size: 16px;">Fetching Data...</h3>
+    </div>
+
+    <!-- PHOTO MODAL -->
+    <div id="photoModal">
+        <div class="modal-content">
+            <h4 style="margin-bottom: 10px; color:var(--brand-color);">Attendance Selfie</h4>
+            <img id="modalImg" src="" alt="Selfie">
+            <button class="btn-close" onclick="document.getElementById('photoModal').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="brand">
+            <h2>VPFC ADMIN</h2>
+            <p>Control Panel</p>
+        </div>
+        <div class="menu-list">
+            <a href="admin-dashboard.html" class="menu-item"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="admin-assign-accounts.html" class="menu-item"><i class="fas fa-tasks"></i> <span>Manage Assignments</span></a>
+            <a href="admin-complaint-box.html" class="menu-item"><i class="fas fa-exclamation-circle"></i> <span>Global Complaints</span></a>
+            <a href="admin-tc-visit-status.html" class="menu-item"><i class="fas fa-clipboard-check"></i> <span>All Visit Status</span></a>
+            <a href="admin-emp-performance.html" class="menu-item"><i class="fas fa-chart-line"></i> <span>Emp. Performance</span></a>
+            <a href="admin-branch-report.html" class="menu-item"><i class="fas fa-building"></i> <span>Branch Report</span></a>
+            <a href="admin-overall-performance.html" class="menu-item"><i class="fas fa-chart-pie"></i> <span>Overall Performance</span></a>
+            <a href="admin-attendance-log.html" class="menu-item active"><i class="fas fa-user-clock"></i> <span>Attendance Log</span></a>
+            <a href="admin-employee-register.html" class="menu-item"><i class="fas fa-users"></i> <span>Employee Register</span></a>
+            <a href="admin-employee-biodata.html" class="menu-item"><i class="fas fa-address-card"></i> <span>Employee Bio Data</span></a>
+            <a href="admin-live-location.html" class="menu-item"><i class="fas fa-map-marker-alt"></i> <span>Live Radar</span></a>
+            <a href="admin-camp-history.html" class="menu-item"><i class="fas fa-campground"></i> <span>Camp History</span></a>
+            <a href="admin-settings.html" class="menu-item"><i class="fas fa-cog"></i> <span>System Settings</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title">Attendance Log (Admin)</div>
+            <div class="user-profile"><i class="fas fa-user-shield"></i> <span id="displayUserName">Admin</span></div>
+        </div>
+
+        <div class="page-container">
+            
+            <div class="tabs-container">
+                <button class="tab-btn active" id="btnTabDaily" onclick="switchTab('daily')"><i class="fas fa-list-alt"></i> Daily Log (All Employees)</button>
+                <button class="tab-btn" id="btnTabMonthly" onclick="switchTab('monthly')"><i class="fas fa-calendar-alt"></i> Monthly Calendar (Single)</button>
+            </div>
+
+            <!-- ============================ -->
+            <!-- TAB 1: DAILY LOG (ALL EMPS)  -->
+            <!-- ============================ -->
+            <div id="dailySection">
+                <div class="summary-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-total"><i class="fas fa-users"></i></div>
+                        <div class="stat-info"><h3 id="stTotal">0</h3><p>Total Employees</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-online"><i class="fas fa-walking"></i></div>
+                        <div class="stat-info"><h3 id="stOnline">0</h3><p>Live / Online</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-offline"><i class="fas fa-home"></i></div>
+                        <div class="stat-info"><h3 id="stOffline">0</h3><p>Duty Ended / Offline</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-absent"><i class="fas fa-user-times"></i></div>
+                        <div class="stat-info"><h3 id="stAbsent">0</h3><p>Absent Today</p></div>
+                    </div>
+                </div>
+
+                <div class="filter-card">
+                    <div class="input-group">
+                        <label>Select Date</label>
+                        <input type="date" id="fltDate">
+                    </div>
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="fltBranch">
+                            <option value="ALL">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex: 0.5;">
+                        <button class="btn-action" style="width: 100%;" onclick="loadDailyAttendance()"><i class="fas fa-sync-alt"></i> Load Log</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <div>Employee & Branch</div>
+                        <div>Till Date Stats</div>
+                        <div>Live Status</div>
+                        <div>Punch IN (Start)</div>
+                        <div>Punch OUT (End)</div>
+                        <div>Total KM</div>
+                        <div>Visits</div>
+                    </div>
+                    <div class="scrollable-body" id="tableBody"></div>
+                </div>
+            </div>
+
+            <!-- ============================ -->
+            <!-- TAB 2: MONTHLY CALENDAR      -->
+            <!-- ============================ -->
+            <div id="monthlySection" style="display: none;">
+                <div class="filter-card">
+                    <div class="input-group">
+                        <label>Select Branch</label>
+                        <select id="calBranch" onchange="populateCalEmployees()">
+                            <option value="">-- Select Branch --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Employee</label>
+                        <select id="calEmployee">
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Month</label>
+                        <input type="month" id="calMonth">
+                    </div>
+                    <div class="input-group" style="flex: 0.5;">
+                        <button class="btn-action" style="width: 100%;" onclick="loadMonthlyCalendar()"><i class="fas fa-search"></i> Generate</button>
+                    </div>
+                </div>
+
+                <div class="cal-container" id="calendarWrapper" style="display: none;">
+                    <div class="cal-header">
+                        <div class="cal-title" id="calTitleDisplay">Employee Name - Month Year</div>
+                        <div class="cal-stats">
+                            <div class="c-stat-box" style="color: #16a34a;"><span id="calCountP">0</span><p>Present</p></div>
+                            <div class="c-stat-box" style="color: #dc2626;"><span id="calCountA">0</span><p>Absent</p></div>
+                            <div class="c-stat-box" style="color: var(--text-main);"><span id="calCountTotal">0</span><p>Working Days</p></div>
+                        </div>
+                    </div>
+                    <div class="cal-weekdays">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="cal-days" id="calGrid">
+                        <!-- Calendar Days Injected -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvjFcKKiu4OMmQckYXMTejdBJh9tC6TjM",
+            authDomain: "sri-vishnu-priya-finance-c591f.firebaseapp.com",
+            databaseURL: "https://sri-vishnu-priya-finance-c591f-default-rtdb.firebaseio.com",
+            projectId: "sri-vishnu-priya-finance-c591f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        window.allEmps = [];
+
+        const today = new Date();
+        const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+        const localMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        
+        document.getElementById('fltDate').value = localDate;
+        document.getElementById('calMonth').value = localMonthStr;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let tcId = user.email.split('@')[0];
+                try {
+                    let snap = await get(child(ref(db), `telewingsUsers/${tcId.toUpperCase()}`));
+                    if (!snap.exists()) snap = await get(child(ref(db), `telewingsUsers/${tcId.toLowerCase()}`));
+
+                    if (snap.exists() && (snap.val().role === 'Admin' || snap.val().role === 'head')) {
+                        document.getElementById('displayUserName').innerText = `${snap.val().name || tcId.toUpperCase()} (ADMIN)`;
+                        await fetchEmployees();
+                    } else {
+                        await signOut(auth);
+                        alert("Access Denied: Admin privileges required.");
+                        window.location.href = "index.html";
+                    }
+                } catch(e) { window.location.href = "index.html"; }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        window.switchTab = function(tabName) {
+            document.getElementById('btnTabDaily').classList.remove('active');
+            document.getElementById('btnTabMonthly').classList.remove('active');
+            document.getElementById('dailySection').style.display = 'none';
+            document.getElementById('monthlySection').style.display = 'none';
+
+            if(tabName === 'daily') {
+                document.getElementById('btnTabDaily').classList.add('active');
+                document.getElementById('dailySection').style.display = 'block';
+            } else {
+                document.getElementById('btnTabMonthly').classList.add('active');
+                document.getElementById('monthlySection').style.display = 'block';
+            }
+        };
+
+        async function fetchEmployees() {
+            try {
+                // Fetch Branches strictly from DB node 'branches'
+                const branchSnap = await get(ref(db, 'branches'));
+                if (branchSnap.exists()) {
+                    const bSelect = document.getElementById('fltBranch');
+                    const cSelect = document.getElementById('calBranch');
+                    
+                    bSelect.innerHTML = '<option value="ALL">All Branches</option>';
+                    cSelect.innerHTML = '<option value="">-- Select Branch --</option>';
+                    
+                    branchSnap.forEach(child => {
+                        let bName = child.val().name;
+                        bSelect.innerHTML += `<option value="${bName}">${bName}</option>`;
+                        cSelect.innerHTML += `<option value="${bName}">${bName}</option>`;
+                    });
+                }
+
+                // Fetch Employees for Mapping
+                const snap = await get(ref(db, `employees`));
+                if(snap.exists()) {
+                    const data = snap.val();
+                    window.allEmps = [];
+                    for(let id in data) {
+                        window.allEmps.push({ id: id, name: data[id].name, branch: data[id].branch });
+                    }
+                    
+                    window.allEmps.sort((a, b) => a.name.localeCompare(b.name));
+                    await loadDailyAttendance();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        window.populateCalEmployees = function() {
+            const branch = document.getElementById('calBranch').value;
+            const empSelect = document.getElementById('calEmployee');
+            empSelect.innerHTML = '<option value="">-- Select Employee --</option>';
+            
+            if(!branch) return;
+
+            window.allEmps.forEach(emp => {
+                if(emp.branch === branch) {
+                    empSelect.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id.toUpperCase()})</option>`;
+                }
+            });
+        }
+
+        window.viewSelfie = function(url) {
+            document.getElementById('modalImg').src = url;
+            document.getElementById('photoModal').style.display = 'flex';
+        }
+
+        // ==========================================
+        // DAILY LOG LOGIC
+        // ==========================================
+        window.loadDailyAttendance = async function() {
+            const dateStr = document.getElementById('fltDate').value;
+            const branch = document.getElementById('fltBranch').value;
+            
+            if(!dateStr) return alert("Please select a date.");
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            const monthStr = dateStr.substring(0, 7); 
+            let targetEmps = window.allEmps;
+            if(branch !== 'ALL') targetEmps = targetEmps.filter(e => e.branch === branch);
+
+            let cOnline = 0, cOffline = 0, cAbsent = 0;
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            try {
+                let visitsMap = {};
+                const visitsSnap = await get(ref(db, `visits/${monthStr}`));
+                if(visitsSnap.exists()) {
+                    const vData = visitsSnap.val();
+                    for(let vId in vData) {
+                        let v = vData[vId];
+                        if(v.date === dateStr && v.eid) {
+                            if(!visitsMap[v.eid]) visitsMap[v.eid] = 0;
+                            visitsMap[v.eid]++;
+                        }
+                    }
+                }
+
+                let dParts = dateStr.split('-');
+                let selYear = parseInt(dParts[0]);
+                let selMonth = parseInt(dParts[1]) - 1;
+                let curDateObj = new Date();
+                let isCurrentMonth = (curDateObj.getFullYear() === selYear && curDateObj.getMonth() === selMonth);
+                let daysToCount = isCurrentMonth ? curDateObj.getDate() : new Date(selYear, selMonth + 1, 0).getDate();
+
+                for (let emp of targetEmps) {
+                    const monthSnap = await get(ref(db, `attendance/${emp.id}/${monthStr}`));
+                    let presentCount = 0;
+                    let dailyAtt = null;
+
+                    if (monthSnap.exists()) {
+                        const monthData = monthSnap.val();
+                        for(let dayKey in monthData) {
+                            let dayNum = parseInt(dayKey.split('-')[2]);
+                            if (dayNum <= daysToCount) {
+                                if (monthData[dayKey].onlineTime || monthData[dayKey].status === 'Present') {
+                                    presentCount++;
+                                }
+                            }
+                        }
+                        if(monthData[dateStr]) dailyAtt = monthData[dateStr];
+                    }
+
+                    let absentCount = daysToCount - presentCount;
+                    if(absentCount < 0) absentCount = 0;
+
+                    let statusHtml = '';
+                    let inHtml = '<span style="color:var(--text-muted); font-size:11px;">--</span>';
+                    let outHtml = '<span style="color:var(--text-muted); font-size:11px;">--</span>';
+                    let km = '0.0';
+                    let visits = visitsMap[emp.id] || 0; 
+
+                    if (dailyAtt && dailyAtt.onlineTime) {
+                        km = parseFloat(dailyAtt.totalKm || 0).toFixed(1);
+
+                        let mapLink = '';
+                        if(dailyAtt.startLat && dailyAtt.startLng) {
+                            mapLink = `<a href="https://maps.google.com/?q=${dailyAtt.startLat},${dailyAtt.startLng}" target="_blank" class="action-link"><i class="fas fa-map-marker-alt"></i> Location</a>`;
+                        }
+                        let selfieLink = '';
+                        if(dailyAtt.selfieUrl && dailyAtt.selfieUrl !== 'N/A') {
+                            selfieLink = `<span class="action-link" onclick="viewSelfie('${dailyAtt.selfieUrl}')"><i class="fas fa-image"></i> Selfie</span>`;
+                        }
+                        
+                        inHtml = `<div class="time-text">${dailyAtt.onlineTime}</div>
+                                  <div style="display:flex; gap:5px; flex-wrap:wrap;">${selfieLink} ${mapLink}</div>`;
+
+                        if (dailyAtt.offlineTime) {
+                            cOffline++;
+                            statusHtml = `<span class="status-badge s-offline"><i class="fas fa-sign-out-alt"></i> Offline</span>`;
+                            outHtml = `<div class="time-text">${dailyAtt.offlineTime}</div>`;
+                        } else {
+                            cOnline++;
+                            statusHtml = `<span class="status-badge s-online"><i class="fas fa-circle"></i> Online</span>`;
+                        }
+                    } else {
+                        cAbsent++;
+                        statusHtml = `<span class="status-badge s-absent"><i class="fas fa-times-circle"></i> Absent</span>`;
+                    }
+
+                    const row = `
+                        <div class="data-row">
+                            <div>
+                                <div class="emp-name">${emp.name.toUpperCase()}</div>
+                                <div class="emp-branch">${emp.branch || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:var(--text-main); margin-bottom:2px;">Till Date (${daysToCount} Days)</div>
+                                <div class="month-stats">
+                                    <span class="m-badge m-present">P: ${presentCount}</span>
+                                    <span class="m-badge m-absent">A: ${absentCount}</span>
+                                </div>
+                            </div>
+                            <div>${statusHtml}</div>
+                            <div>${inHtml}</div>
+                            <div>${outHtml}</div>
+                            <div><span style="font-weight:800; color:#8b5cf6;">${km} KM</span></div>
+                            <div><span style="font-weight:800; color:#f59e0b;">${visits}</span></div>
+                        </div>
+                    `;
+                    tbody.innerHTML += row;
+                }
+
+                if(targetEmps.length === 0) {
+                    tbody.innerHTML = `<div style="padding:20px; text-align:center;">No employees found for this branch.</div>`;
+                }
+
+                document.getElementById('stTotal').innerText = targetEmps.length;
+                document.getElementById('stOnline').innerText = cOnline;
+                document.getElementById('stOffline').innerText = cOffline;
+                document.getElementById('stAbsent').innerText = cAbsent;
+
+            } catch (error) {
+                console.error(error);
+                alert("Failed to load attendance logs.");
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        };
+
+        // ==========================================
+        // MONTHLY CALENDAR LOGIC
+        // ==========================================
+        window.loadMonthlyCalendar = async function() {
+            const empId = document.getElementById('calEmployee').value;
+            const monthStr = document.getElementById('calMonth').value;
+
+            if(!empId || !monthStr) return alert("Please select an Employee and a Month.");
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('calendarWrapper').style.display = 'none';
+
+            try {
+                const empInfo = window.allEmps.find(e => e.id === empId);
+                const monthsNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                
+                const selYear = parseInt(monthStr.split('-')[0]);
+                const selMonthIdx = parseInt(monthStr.split('-')[1]) - 1;
+                
+                document.getElementById('calTitleDisplay').innerText = `${empInfo.name.toUpperCase()} - ${monthsNames[selMonthIdx]} ${selYear}`;
+
+                let attMap = {};
+                const attSnap = await get(ref(db, `attendance/${empId}/${monthStr}`));
+                if (attSnap.exists()) attMap = attSnap.val();
+
+                const grid = document.getElementById('calGrid');
+                grid.innerHTML = '';
+                
+                const firstDay = new Date(selYear, selMonthIdx, 1).getDay(); 
+                const daysInMonth = new Date(selYear, selMonthIdx + 1, 0).getDate();
+                
+                let curDateObj = new Date();
+                let isCurrentMonth = (curDateObj.getFullYear() === selYear && curDateObj.getMonth() === selMonthIdx);
+                let isPastMonth = (curDateObj.getFullYear() > selYear || (curDateObj.getFullYear() === selYear && curDateObj.getMonth() > selMonthIdx));
+                let currentDay = curDateObj.getDate();
+
+                let cPresent = 0, cAbsent = 0, totalWorkingDays = 0;
+
+                for(let i = 0; i < firstDay; i++) {
+                    grid.innerHTML += `<div class="day-cell day-empty"></div>`;
+                }
+
+                for(let i = 1; i <= daysInMonth; i++) {
+                    let cellClass = "day-cell";
+                    let dayStr = `${selYear}-${String(selMonthIdx + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    
+                    if (isCurrentMonth && i === currentDay) cellClass += " cal-today";
+
+                    let shouldEvaluate = isPastMonth || (isCurrentMonth && i <= currentDay);
+                    let innerHtml = `<div class="day-num">${i}</div>`;
+
+                    if (shouldEvaluate) {
+                        totalWorkingDays++;
+                        if (attMap[dayStr] && (attMap[dayStr].onlineTime || attMap[dayStr].status === 'Present')) {
+                            cellClass += " cal-present";
+                            innerHtml += `<div class="day-indicator"><i class="fas fa-check"></i> Present</div>`;
+                            cPresent++;
+                        } else {
+                            cellClass += " cal-absent";
+                            innerHtml += `<div class="day-indicator"><i class="fas fa-times"></i> Absent</div>`;
+                            cAbsent++;
+                        }
+                    } else {
+                        innerHtml += `<div class="day-indicator" style="color:#cbd5e1;">-</div>`;
+                    }
+
+                    grid.innerHTML += `<div class="${cellClass}">${innerHtml}</div>`;
+                }
+
+                document.getElementById('calCountP').innerText = cPresent;
+                document.getElementById('calCountA').innerText = cAbsent;
+                document.getElementById('calCountTotal').innerText = totalWorkingDays;
+
+                document.getElementById('calendarWrapper').style.display = 'block';
+
+            } catch(e) {
+                console.error(e);
+                alert("Error loading calendar.");
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
