@@ -7,8 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Leaflet Map CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- OFFICIAL GOOGLE MAPS API INTEGRATION -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCnFpeVwtaQ1u0_zrY3o50qQGE1SFZj0E0"></script>
 
     <style>
         :root {
@@ -44,7 +44,7 @@
 
         .user-profile { display: flex; align-items: center; gap: 10px; background: var(--main-bg); padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--text-main); }
 
-        /* --- WORKSPACE : FORCED VERTICAL LAYOUT --- */
+        /* --- WORKSPACE --- */
         .tracker-workspace { display: flex; flex-direction: column; flex: 1; height: calc(100vh - 72px); overflow: hidden; }
 
         /* --- EMP LIST PANEL (TOP) --- */
@@ -77,19 +77,17 @@
         .emp-name-text { font-size: 13px; font-weight: 800; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .emp-sub-text { font-size: 11px; color: var(--text-muted); font-weight: 600; display: flex; gap: 6px; align-items: center; margin-top: 2px; }
 
-        /* GOOGLE MAPS BUTTON INSIDE LIST */
         .btn-gmap { background: #f1f5f9; color: #0284c7; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; text-decoration: none; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 5px; flex-shrink: 0;}
         .btn-gmap:hover { background: #e0f2fe; border-color: #bae6fd; }
 
         /* --- MAP CONTAINER (BOTTOM) --- */
         .map-container { flex: 1; width: 100%; position: relative; background: #1e293b; overflow: hidden; }
-        #liveMap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+        #liveMap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; width: 100%; height: 100%; }
 
-        .map-floating-controls { position: absolute; top: 15px; right: 15px; z-index: 999; display: flex; gap: 10px; }
+        .map-floating-controls { position: absolute; top: 15px; right: 15px; z-index: 10; display: flex; gap: 10px; }
         .btn-map-ctl { background: white; color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; }
         .btn-map-ctl:hover { background: #f8fafc; color: var(--brand-color); }
 
-        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
         .pop-card { padding: 8px; min-width: 220px; font-family: 'Inter', sans-serif;}
         .pop-header { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;}
         .pop-branch { font-size: 11px; font-weight: 700; color: var(--brand-color); margin-bottom: 8px; }
@@ -117,7 +115,7 @@
 
     <div id="loadingOverlay">
         <i class="fas fa-circle-notch fa-spin" style="font-size: 40px; color: var(--brand-color); margin-bottom: 15px;"></i>
-        <h3 style="color:var(--text-main); font-size: 16px;">Connecting to Live Satellite...</h3>
+        <h3 style="color:var(--text-main); font-size: 16px;">Connecting to Google Maps Satellite...</h3>
     </div>
 
     <!-- SIDEBAR -->
@@ -153,7 +151,6 @@
         </div>
 
         <div class="tracker-workspace">
-            
             <div class="emp-panel">
                 <div class="emp-filter-box">
                     <input type="text" id="searchEmp" class="search-input" placeholder="Search employee..." onkeyup="renderUI()">
@@ -167,9 +164,7 @@
                     <span><i class="fas fa-circle" style="color:var(--success); font-size:9px;"></i> Online: <b id="countOnline" style="color:var(--success);">0</b></span>
                 </div>
 
-                <div class="emp-list" id="empListContainer">
-                    <!-- Dynamic Employee Cards -->
-                </div>
+                <div class="emp-list" id="empListContainer"></div>
             </div>
 
             <div class="map-container" id="mapWrapper">
@@ -178,14 +173,10 @@
                 </div>
                 <div id="liveMap"></div>
             </div>
-
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Firebase SDKs & Logic -->
+    <!-- Firebase SDKs & Google Maps Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -204,6 +195,7 @@
 
         let map;
         let markers = {};
+        let infoWindow;
         window.allEmployeesData = {};
         window.liveDataMap = {}; 
 
@@ -211,17 +203,76 @@
         const DEFAULT_LNG = 80.6480;
         let initialCenteringDone = false;
 
+        // Custom Overlay Marker for Google Maps
+        class LiveEmpOverlay extends google.maps.OverlayView {
+            constructor(latlng, map, photoUrl, isOnline, onClick) {
+                super();
+                this.latlng = latlng;
+                this.photoUrl = photoUrl;
+                this.isOnline = isOnline;
+                this.onClick = onClick;
+                this.div = null;
+                this.setMap(map);
+            }
+            onAdd() {
+                this.div = document.createElement('div');
+                this.div.style.position = 'absolute';
+                this.div.style.cursor = 'pointer';
+                this.div.style.zIndex = '100';
+                this.updateHtml();
+                if (this.onClick) {
+                    this.div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.onClick();
+                    });
+                }
+                const panes = this.getPanes();
+                panes.overlayMouseTarget.appendChild(this.div);
+            }
+            updateHtml() {
+                if (!this.div) return;
+                const borderCol = this.isOnline ? '#10b981' : '#64748b';
+                this.div.innerHTML = `
+                    <div style="width: 48px; height: 48px; border-radius: 50%; border: 3px solid ${borderCol}; box-shadow: 0 4px 15px rgba(0,0,0,0.5); overflow: hidden; background: white; display: flex; justify-content: center; align-items: center; transition: transform 0.2s;">
+                        <img src="${this.photoUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                    </div>
+                `;
+            }
+            draw() {
+                const overlayProjection = this.getProjection();
+                if (!overlayProjection || !this.div) return;
+                const point = overlayProjection.fromLatLngToDivPixel(this.latlng);
+                if (point) {
+                    this.div.style.left = (point.x - 24) + 'px';
+                    this.div.style.top = (point.y - 24) + 'px';
+                }
+            }
+            onRemove() {
+                if (this.div && this.div.parentNode) {
+                    this.div.parentNode.removeChild(this.div);
+                    this.div = null;
+                }
+            }
+            setPosition(latlng, isOnline, photoUrl) {
+                this.latlng = latlng;
+                this.isOnline = isOnline;
+                if (photoUrl) this.photoUrl = photoUrl;
+                this.updateHtml();
+                this.draw();
+            }
+        }
+
         function initMap() {
-            map = L.map('liveMap', { zoomControl: false }).setView([DEFAULT_LAT, DEFAULT_LNG], 9);
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-            L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-                maxZoom: 20,
-                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-                attribution: '© Google Maps'
-            }).addTo(map);
-
-            setTimeout(() => { map.invalidateSize(); }, 500);
+            map = new google.maps.Map(document.getElementById("liveMap"), {
+                center: { lat: DEFAULT_LAT, lng: DEFAULT_LNG },
+                zoom: 9,
+                mapTypeId: 'hybrid',
+                zoomControl: true,
+                mapTypeControl: true,
+                streetViewControl: false,
+                fullscreenControl: false
+            });
+            infoWindow = new google.maps.InfoWindow();
         }
 
         onAuthStateChanged(auth, async (user) => {
@@ -236,16 +287,11 @@
                         let isAdmin = (userData.role === 'Admin' || userData.role === 'head');
                         let hasLivePerm = false;
                         
-                        // Check if telecaller has a-live permission
                         if (userData.perms) {
-                            if (Array.isArray(userData.perms)) {
-                                hasLivePerm = userData.perms.includes("a-live");
-                            } else {
-                                hasLivePerm = Object.values(userData.perms).includes("a-live");
-                            }
+                            if (Array.isArray(userData.perms)) { hasLivePerm = userData.perms.includes("a-live"); } 
+                            else { hasLivePerm = Object.values(userData.perms).includes("a-live"); }
                         }
 
-                        // Allow if Admin OR Telecaller with Live perm
                         if (isAdmin || hasLivePerm) {
                             let roleBadge = isAdmin ? "(ADMIN)" : "(TELECALLER)";
                             document.getElementById('displayUserName').innerText = `${userData.name || tcId.toUpperCase()} ${roleBadge}`;
@@ -256,22 +302,14 @@
                             alert("Access Denied: You do not have permission to view Live Radar.");
                             window.location.href = "index.html";
                         }
-                    } else {
-                        await signOut(auth);
-                        window.location.href = "index.html";
-                    }
+                    } else { await signOut(auth); window.location.href = "index.html"; }
                 } catch(e) { window.location.href = "index.html"; }
-            } else {
-                window.location.href = "index.html";
-            }
+            } else { window.location.href = "index.html"; }
         });
-
-        window.addEventListener('resize', () => { if(map) map.invalidateSize(); });
 
         async function startSystem() {
             document.getElementById('loadingOverlay').style.display = 'flex';
             try {
-                // Fetch Branches strictly from DB node 'branches'
                 const branchSnap = await get(ref(db, 'branches'));
                 if (branchSnap.exists()) {
                     const bSelect = document.getElementById('branchSelect');
@@ -285,23 +323,25 @@
                 }
 
                 const empSnap = await get(ref(db, 'employees'));
-                if (empSnap.exists()) {
-                    window.allEmployeesData = empSnap.val();
-                }
+                if (empSnap.exists()) { window.allEmployeesData = empSnap.val(); }
 
-                const today = new Date();
-                const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
-                const monthStr = localDate.substring(0, 7);
+                const todayObj = new Date();
+                const rYear = todayObj.getFullYear();
+                const rMonth = String(todayObj.getMonth() + 1).padStart(2, '0');
+                const rDate = String(todayObj.getDate()).padStart(2, '0');
+                const localMonthStr = `${rYear}-${rMonth}`;
+                const localDateStr = `${localMonthStr}-${rDate}`;
 
+                // Fallback to Attendance table
                 const attSnap = await get(ref(db, `attendance`));
                 if (attSnap.exists()) {
                     const allAtt = attSnap.val();
                     for(let empKey in allAtt) {
-                        const mObj = allAtt[empKey] ? allAtt[empKey][monthStr] : null;
-                        if(mObj && mObj[localDate]) {
-                            const d = mObj[localDate];
-                            const lat = parseFloat(d.currentLat || d.startLat);
-                            const lng = parseFloat(d.currentLng || d.startLng);
+                        const mObj = allAtt[empKey] ? allAtt[empKey][localMonthStr] : null;
+                        if(mObj && mObj[localDateStr]) {
+                            const d = mObj[localDateStr];
+                            const lat = parseFloat(d.lastLat || d.startLat);
+                            const lng = parseFloat(d.lastLng || d.startLng);
                             if(!isNaN(lat) && !isNaN(lng) && lat !== 0) {
                                 window.liveDataMap[empKey.toLowerCase()] = {
                                     lat: lat, lng: lng, time: d.onlineTime || '--', isOnline: !d.offlineTime && !!d.onlineTime, source: 'Attendance'
@@ -313,6 +353,7 @@
 
                 renderUI();
 
+                // Realtime sync from liveLocations
                 onValue(ref(db, 'liveLocations'), (snapshot) => {
                     if (snapshot.exists()) {
                         const data = snapshot.val();
@@ -337,7 +378,6 @@
                 console.error(e);
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                setTimeout(() => map.invalidateSize(), 500);
             }
         }
 
@@ -346,16 +386,21 @@
             const branchFilter = document.getElementById('branchSelect').value;
             const searchVal = document.getElementById('searchEmp').value.toLowerCase().trim();
 
-            let totalCount = 0; let onlineCount = 0; let bounds = []; let listHTML = ''; let activeEmpIds = new Set();
+            let totalCount = 0; let onlineCount = 0; 
+            let bounds = new google.maps.LatLngBounds(); 
+            let validPoints = 0;
+            let listHTML = ''; 
+            let activeEmpIds = new Set();
 
             for (let empId in window.allEmployeesData) {
                 const emp = window.allEmployeesData[empId];
                 const empIdLower = empId.toLowerCase();
+                const empName = emp.name ? emp.name.toString() : empId.toString(); 
                 
                 const loc = window.liveDataMap[empIdLower] || { lat: null, lng: null, isOnline: false, time: '--', source: 'None' };
 
-                if (branchFilter !== 'ALL' && emp.branch !== branchFilter) continue;
-                if (searchVal && !emp.name.toLowerCase().includes(searchVal) && !empId.toLowerCase().includes(searchVal)) continue;
+                if (branchFilter !== 'ALL' && (!emp.branch || emp.branch.toUpperCase() !== branchFilter.toUpperCase())) continue;
+                if (searchVal && !empName.toLowerCase().includes(searchVal) && !empId.toLowerCase().includes(searchVal)) continue;
 
                 activeEmpIds.add(empIdLower);
                 totalCount++;
@@ -381,7 +426,7 @@
                             <span class="status-dot ${statusDotClass}"></span>
                         </div>
                         <div class="emp-meta">
-                            <div class="emp-name-text">${emp.name.toUpperCase()}</div>
+                            <div class="emp-name-text">${empName.toUpperCase()}</div>
                             <div class="emp-sub-text">
                                 <span>${empId.toUpperCase()}</span> • <span>${emp.branch || 'N/A'}</span>
                             </div>
@@ -394,61 +439,40 @@
                 `;
 
                 if (loc.lat && loc.lng) {
-                    bounds.push([loc.lat, loc.lng]);
-                    
-                    // --- NEW UPDATED MAP MARKER CODE (PROFILE PHOTO) ---
-                    const markerColor = loc.isOnline ? '#10b981' : '#64748b';
-                    const customIcon = L.divIcon({
-                        className: 'custom-map-pin',
-                        html: `
-                            <div style="width: 48px; height: 48px; border-radius: 50%; border: 3px solid ${markerColor}; box-shadow: 0 4px 15px rgba(0,0,0,0.4); overflow: hidden; background: white; transition: all 0.5s ease; display: flex; justify-content: center; align-items: center;">
-                                <img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
-                            </div>
-                        `,
-                        iconSize: [48, 48], 
-                        iconAnchor: [24, 24], 
-                        popupAnchor: [0, -26]
-                    });
-                    // ----------------------------------------------------
-
-                    const popupContent = `
-                        <div class="pop-card">
-                            <div class="pop-header">
-                                <span>${emp.name.toUpperCase()}</span>
-                                <span style="font-size:10px; color:${loc.isOnline ? 'var(--success)' : 'var(--danger)'};">● ${loc.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
-                            </div>
-                            <div class="pop-branch">${emp.branch || 'Branch'} (${empId})</div>
-                            <div class="pop-row"><span>Mobile:</span><b>${emp.phone || 'N/A'}</b></div>
-                            <div class="pop-row"><span>Time:</span><b>${loc.time}</b></div>
-                            <a href="https://maps.google.com/?q=${loc.lat},${loc.lng}" target="_blank" class="pop-link">
-                                <i class="fas fa-location-arrow"></i> Open in Google Maps
-                            </a>
-                        </div>
-                    `;
+                    const position = new google.maps.LatLng(loc.lat, loc.lng);
+                    bounds.extend(position);
+                    validPoints++;
 
                     if (markers[empIdLower]) {
-                        markers[empIdLower].setLatLng([loc.lat, loc.lng]);
-                        markers[empIdLower].setIcon(customIcon);
-                        if (markers[empIdLower].getPopup()) markers[empIdLower].getPopup().setContent(popupContent);
+                        markers[empIdLower].setPosition(position, loc.isOnline, photoUrl);
                     } else {
-                        const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(map);
-                        marker.bindPopup(popupContent, { className: 'custom-popup' });
-                        markers[empIdLower] = marker;
+                        markers[empIdLower] = new LiveEmpOverlay(position, map, photoUrl, loc.isOnline, () => {
+                            window.focusEmployee(empIdLower);
+                        });
                     }
                 }
             }
 
             for (let id in markers) {
-                if (!activeEmpIds.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
+                if (!activeEmpIds.has(id)) {
+                    markers[id].setMap(null);
+                    delete markers[id];
+                }
             }
 
             listContainer.innerHTML = listHTML;
             document.getElementById('countTotal').innerText = totalCount;
             document.getElementById('countOnline').innerText = onlineCount;
 
-            if (!initialCenteringDone && bounds.length > 0) {
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-                initialCenteringDone = true;
+            // Auto-Center logic
+            if (validPoints > 0) {
+                if (searchVal !== '' || branchFilter !== 'ALL') {
+                    map.fitBounds(bounds);
+                    if (validPoints === 1) map.setZoom(16);
+                } else if (!initialCenteringDone) {
+                    map.fitBounds(bounds);
+                    initialCenteringDone = true;
+                }
             }
         };
 
@@ -458,19 +482,53 @@
             if (card) card.classList.add('active-emp');
 
             const loc = window.liveDataMap[empIdLower];
-            if (loc && loc.lat && loc.lng && markers[empIdLower]) {
-                map.flyTo([loc.lat, loc.lng], 16, { animate: true, duration: 1.5 });
-                markers[empIdLower].openPopup();
+            const emp = window.allEmployeesData[empIdLower] || {};
+            const empName = emp.name ? emp.name.toString() : empIdLower.toString();
+
+            if (loc && loc.lat && loc.lng) {
+                const targetPos = new google.maps.LatLng(loc.lat, loc.lng);
+                map.panTo(targetPos);
+                map.setZoom(16);
+
+                const popupHtml = `
+                    <div class="pop-card">
+                        <div class="pop-header">
+                            <span>${empName.toUpperCase()}</span>
+                            <span style="font-size:10px; color:${loc.isOnline ? 'var(--success)' : 'var(--danger)'};">● ${loc.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+                        </div>
+                        <div class="pop-branch">${emp.branch || 'Branch'} (${empIdLower.toUpperCase()})</div>
+                        <div class="pop-row"><span>Mobile:</span><b>${emp.phone || 'N/A'}</b></div>
+                        <div class="pop-row"><span>Time:</span><b>${loc.time}</b></div>
+                        <a href="https://maps.google.com/?q=${loc.lat},${loc.lng}" target="_blank" class="pop-link">
+                            <i class="fas fa-location-arrow"></i> Open in Google Maps
+                        </a>
+                    </div>
+                `;
+
+                infoWindow.setContent(popupHtml);
+                infoWindow.setPosition(targetPos);
+                infoWindow.open(map);
             } else {
-                map.setView([DEFAULT_LAT, DEFAULT_LNG], 9);
+                map.setCenter({ lat: DEFAULT_LAT, lng: DEFAULT_LNG });
+                map.setZoom(9);
             }
         };
 
         window.resetMapView = function() {
-            let activeBounds = [];
-            for (let id in markers) activeBounds.push(markers[id].getLatLng());
-            if (activeBounds.length > 0) map.fitBounds(activeBounds, { padding: [50, 50], maxZoom: 13 });
-            else map.setView([DEFAULT_LAT, DEFAULT_LNG], 8);
+            let bounds = new google.maps.LatLngBounds();
+            let count = 0;
+            for (let id in markers) {
+                if (markers[id] && markers[id].latlng) {
+                    bounds.extend(markers[id].latlng);
+                    count++;
+                }
+            }
+            if (count > 0) {
+                map.fitBounds(bounds);
+            } else {
+                map.setCenter({ lat: DEFAULT_LAT, lng: DEFAULT_LNG });
+                map.setZoom(8);
+            }
         };
     </script>
 </body>
